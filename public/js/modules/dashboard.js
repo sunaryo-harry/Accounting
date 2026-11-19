@@ -12,20 +12,16 @@ Modules.Dashboard = {
     `;
 
     try {
-      const [analysisRes, arAgingRes, apAgingRes, tbRes] = await Promise.all([
-        fetch('/api/reports/analysis'),
-        fetch('/api/rp/aging?type=AR'),
-        fetch('/api/rp/aging?type=AP'),
-        fetch('/api/reports/trial-balance')
+      const entParam = App.activeEntity?.id ? `?entity_id=${App.activeEntity.id}` : '';
+      const [analysis, arAging, apAging, tb] = await Promise.all([
+        App.fetchJson(`/api/reports/analysis${entParam}`).catch(() => ({})),
+        App.fetchJson(`/api/rp/aging?type=AR${App.activeEntity?.id ? '&entity_id=' + App.activeEntity.id : ''}`).catch(() => ({ summary: {}, details: [] })),
+        App.fetchJson(`/api/rp/aging?type=AP${App.activeEntity?.id ? '&entity_id=' + App.activeEntity.id : ''}`).catch(() => ({ summary: {}, details: [] })),
+        App.fetchJson(`/api/reports/trial-balance${entParam}`).catch(() => ({ summary: {}, rows: [] }))
       ]);
 
-      const analysis = await analysisRes.json();
-      const arAging = await arAgingRes.json();
-      const apAging = await apAgingRes.json();
-      const tb = await tbRes.json();
-
-      const ebitda = analysis.ebitdaAnalysis || {};
-      const ratios = analysis.financialRatios || {};
+      const ebitda = analysis?.ebitdaAnalysis || {};
+      const ratios = analysis?.financialRatios || {};
 
       container.innerHTML = `
         <div class="page-header-bar">

@@ -33,6 +33,17 @@ jobs:
         run: |
           npm ci --omit=dev
 
+      - name: Bundle Standalone Node.js Runtime for Windows
+        shell: powershell
+        run: |
+          Write-Host "Downloading standalone Node.js x64 runtime..."
+          curl.exe -s -L "https://nodejs.org/dist/v22.12.0/win-x64/node.exe" -o node.exe
+          if (Test-Path node.exe) {
+            Write-Host "node.exe successfully bundled: $([Math]::Round((Get-Item node.exe).Length / 1MB, 2)) MB"
+          } else {
+            Write-Warning "Could not download standalone node.exe, continuing"
+          }
+
       - name: Ensure Dist Directory Exists
         shell: powershell
         run: |

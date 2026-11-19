@@ -43,6 +43,21 @@ window.App = {
     }
   },
 
+  // Safe fetch helper to prevent "Unexpected token '<', <!DOCTYPE... is not valid JSON"
+  fetchJson: async function(url, options = {}) {
+    const res = await fetch(url, options);
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await res.text();
+      throw new Error(`Server backend tidak merespons JSON (HTTP ${res.status}). Pastikan server aplikasi telah berjalan normal.`);
+    }
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || `Kesalahan HTTP ${res.status}`);
+    }
+    return data;
+  },
+
   handleLogin: async function(e) {
     e.preventDefault();
     const username = document.getElementById('login-username')?.value.trim();
@@ -59,14 +74,11 @@ window.App = {
     if (alertEl) alertEl.style.display = 'none';
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const data = await this.fetchJson('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Username atau password tidak valid');
 
       this.currentUser = data.user;
       localStorage.setItem('coretax_user', JSON.stringify(this.currentUser));
@@ -135,12 +147,11 @@ window.App = {
 
   loadLanInfo: async function() {
     try {
-      const res = await fetch('/api/system/lan-info');
-      this.lanInfo = await res.json();
+      this.lanInfo = await this.fetchJson('/api/system/lan-info');
       const lanEl = document.getElementById('lan-server-status');
-      const port = this.lanInfo.port || 4000;
+      const port = this.lanInfo?.port || 4000;
       if (lanEl) {
-        if (this.lanInfo.lanAddresses.length > 0) {
+        if (this.lanInfo?.lanAddresses?.length > 0) {
           lanEl.innerHTML = `<span class="lan-dot"></span> LAN: ${this.lanInfo.lanAddresses[0].ip}:${port}`;
           lanEl.title = `Server LAN Aktif. Tersedia di: ${this.lanInfo.lanAddresses.map(a => a.url).join(', ')}. Klik untuk mengedit pengaturan LAN.`;
         } else {
@@ -154,8 +165,7 @@ window.App = {
 
   loadEntities: async function() {
     try {
-      const res = await fetch('/api/entities');
-      const data = await res.json();
+      const data = await this.fetchJson('/api/entities');
       this.entities = data.entities || [];
       this.activeEntity = this.entities.find(e => e.isActive) || this.entities[0];
 

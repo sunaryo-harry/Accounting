@@ -50,12 +50,29 @@ app.use('/api/spt1771', require('./routes/spt1771'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/system', require('./routes/backup'));
 
+// 404 handler for API routes - ALWAYS return JSON, never HTML
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ error: `API route tidak ditemukan: ${req.method} ${req.originalUrl}` });
+});
+
 // Fallback to SPA index.html for client-side navigation
 app.use((req, res, next) => {
   if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
     return res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
   }
   next();
+});
+
+// Global Error Handler - Ensure API errors always return JSON, not HTML <!DOCTYPE
+app.use((err, req, res, next) => {
+  console.error('Server Error:', err.message);
+  if (res.headersSent) return next(err);
+  if (req.path.startsWith('/api')) {
+    return res.status(err.status || 500).json({
+      error: err.message || 'Terjadi kesalahan pada server backend'
+    });
+  }
+  res.status(500).send(`Server Error: ${err.message}`);
 });
 
 // Bind to 0.0.0.0 to enable LAN access

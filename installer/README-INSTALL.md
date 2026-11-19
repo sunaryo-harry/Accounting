@@ -1,7 +1,15 @@
 # Panduan Instalasi & Konfigurasi Server LAN Windows
 ## Coretax Enterprise Accounting Multi Entitas
+**Credit by Harry Sunaryo**
 
 Aplikasi akuntansi ini dirancang untuk berjalan pada sistem operasi Windows dan dapat diakses oleh banyak pengguna secara bersamaan di jaringan lokal kantor (**LAN Server**).
+
+---
+
+### Kredensial Login Administrator Default
+- **Username:** `Administrator`
+- **Password:** `Harry1175`
+- **Hak Akses:** Administrator Penuh (Dapat menambah staf dan menentukan batasan modul)
 
 ---
 

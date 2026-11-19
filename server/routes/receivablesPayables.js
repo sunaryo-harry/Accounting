@@ -270,4 +270,128 @@ router.get('/aging', (req, res) => {
   }
 });
 
+// BATCH IMPORT Contacts (Customers & Vendors)
+router.post('/import-contacts', (req, res) => {
+  try {
+    const entityId = req.body.entity_id || getActiveEntityId();
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Tidak ada data kontak untuk diimpor' });
+    }
+
+    const insertStmt = db.prepare(`
+      INSERT INTO contacts (id, entity_id, type, name, npwp, nik, email, phone, address, payment_terms_days)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let imported = 0;
+    db.exec('BEGIN TRANSACTION;');
+    try {
+      items.forEach(c => {
+        if (!c.name) return;
+        const id = 'CNT-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(Math.random() * 1000);
+        insertStmt.run(
+          id,
+          entityId,
+          (c.type || 'CUSTOMER').toUpperCase(),
+          String(c.name).trim(),
+          c.npwp || null,
+          c.nik || null,
+          c.email || null,
+          c.phone || null,
+          c.address || null,
+          parseInt(c.payment_terms_days) || 30
+        );
+        imported++;
+      });
+      db.exec('COMMIT;');
+      res.json({ success: true, count: imported, message: `Berhasil mengimpor ${imported} data kontak` });
+    } catch (txErr) {
+      db.exec('ROLLBACK;');
+      throw txErr;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// BATCH IMPORT Invoices (AR / AP)
+router.post('/import-invoices', (req, res) => {
+  try {
+    const entityId = req.body.entity_id || getActiveEntityId();
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Tidak ada data faktur/tagihan untuk diimpor' });
+    }
+
+    // Load existing contacts map by name
+    const contacts = db.prepare('SELECT id, name FROM contacts WHERE entity_id = ?').all(entityId);
+    const contactMap = {};
+    contacts.forEach(c => {
+      contactMap[c.name.toLowerCase().trim()] = c.id;
+    });
+
+    const insertInvoice = db.prepare(`
+      INSERT INTO invoices (id, entity_id, contact_id, invoice_type, invoice_no, date, due_date, subtotal, tax_amount, tax_rate, total_amount, paid_amount, balance_due, status, faktur_pajak_no, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
+    `);
+
+    let imported = 0;
+    db.exec('BEGIN TRANSACTION;');
+    try {
+      items.forEach(inv => {
+        if (!inv.invoice_no) return;
+        const cName = String(inv.contact_name || '').toLowerCase().trim();
+        let contactId = contactMap[cName] || inv.contact_id;
+
+        // Auto create contact if missing
+        if (!contactId && inv.contact_name) {
+          contactId = 'CNT-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(Math.random() * 1000);
+          db.prepare(`
+            INSERT INTO contacts (id, entity_id, type, name, payment_terms_days)
+            VALUES (?, ?, ?, ?, 30)
+          `).run(contactId, entityId, inv.invoice_type === 'AP' ? 'VENDOR' : 'CUSTOMER', String(inv.contact_name).trim());
+          contactMap[cName] = contactId;
+        }
+
+        if (!contactId) return;
+
+        const subtotal = Number(inv.subtotal) || 0;
+        const taxRate = Number(inv.tax_rate) !== undefined ? Number(inv.tax_rate) : 11;
+        const taxAmount = Number(inv.tax_amount) || Math.round(subtotal * (taxRate / 100));
+        const totalAmount = Number(inv.total_amount) || (subtotal + taxAmount);
+        const invId = 'INV-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(Math.random() * 1000);
+
+        insertInvoice.run(
+          invId,
+          entityId,
+          contactId,
+          (inv.invoice_type || 'AR').toUpperCase(),
+          String(inv.invoice_no).trim(),
+          inv.date || new Date().toISOString().slice(0, 10),
+          inv.due_date || new Date().toISOString().slice(0, 10),
+          subtotal,
+          taxAmount,
+          taxRate,
+          totalAmount,
+          totalAmount,
+          'UNPAID',
+          inv.faktur_pajak_no || null,
+          inv.notes || 'Import Tagihan'
+        );
+        imported++;
+      });
+      db.exec('COMMIT;');
+      res.json({ success: true, count: imported, message: `Berhasil mengimpor ${imported} faktur / tagihan!` });
+    } catch (txErr) {
+      db.exec('ROLLBACK;');
+      throw txErr;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

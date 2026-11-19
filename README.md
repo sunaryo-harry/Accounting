@@ -1,7 +1,58 @@
 # Coretax Enterprise Accounting Multi Entitas
 ### Sistem Akuntansi Keuangan, Persediaan, Aktiva Tetap & Perpajakan Terpadu Indonesia
+**Credit by Harry Sunaryo**
 
-Aplikasi akuntansi lengkap berstandar **PSAK (Standar Akuntansi Keuangan)** dan **DJP Coretax Indonesia** yang dirancang khusus untuk perusahaan multi entitas (holding, anak perusahaan, dan cabang). Dilengkapi dengan installer Windows, arsitektur server LAN multi-pengguna, pelaporan keuangan auditor-grade, analisis rasio, EBITDA, OPEX, kontrol hutang/piutang (AR/AP Aging), equalisasi pajak, PSAK 46 (Pajak Kini & Pajak Tangguhan), serta SPT Tahunan Badan Formulir 1771 (Lampiran I s.d. VI).
+Aplikasi akuntansi lengkap berstandar **PSAK (Standar Akuntansi Keuangan)** dan **DJP Coretax Indonesia** yang dirancang khusus untuk perusahaan multi entitas (holding, anak perusahaan, dan cabang). Dilengkapi dengan installer Windows, arsitektur server LAN multi-pengguna, autentikasi pengguna dengan hak akses fleksibel, pelaporan keuangan auditor-grade, analisis rasio, EBITDA, OPEX, kontrol hutang/piutang (AR/AP Aging), equalisasi pajak, PSAK 46 (Pajak Kini & Pajak Tangguhan), serta SPT Tahunan Badan Formulir 1771 (Lampiran I s.d. VI).
+
+---
+
+## 🔐 Kredensial Login Sistem (Default Administrator)
+Sistem dilengkapi fitur keamanan autentikasi multi-pengguna dengan kontrol batasan hak akses (Role-Based Access Control):
+- **Username:** `Administrator`
+- **Password:** `Harry1175`
+- **Peran:** `Administrator (Akses Penuh Seluruh Modul)`
+
+Administrator dapat mendaftarkan pengguna baru (Akuntan, Petugas Pajak, Auditor, Operator Kasir/Gudang) dan menentukan batasan hak akses per modul sesuai wewenang masing-masing.
+
+---
+
+## 🏛️ Fitur Utama & Pembaruan Sistem Terkini
+
+### 1. Template & Impor Data Cepat di Seluruh Modul
+Tersedia tombol **Template & Impor Data** di setiap modul dengan dukungan format Excel (.XLS) dan CSV:
+- **Multi Entitas Perusahaan**
+- **Bagan Akun (Chart of Accounts) & Saldo Awal**
+- **Jurnal Transaksi (Voucher)**
+- **Persediaan Barang Dagang & Kartu Stok**
+- **Kontak Pelanggan & Pemasok (Customer / Vendor)**
+- **Faktur Tagihan Hutang & Piutang (AR / AP)**
+- **Daftar Aktiva Tetap & Fiskal**
+- **Bukti Potong & Faktur Pajak (PPh & PPN)**
+- **Koreksi Fiskal & PSAK 46**
+Setiap modul menyediakan unduhan template terformat rapi disertai data demonstrasi, kotak tempel data, dan pratinjau tabel validasi sebelum eksekusi impor.
+
+### 2. Manajemen Multi Entitas (Edit & Hapus)
+- Entitas terdaftar dapat diedit (Nama, NPWP 16 digit Coretax, KPP, Tahun Buku, Direktur, Alamat, Telepon, Email).
+- Entitas dapat dihapus dengan konfirmasi keamanan (otomatis mengalihkan ke entitas aktif lain jika entitas yang dihapus sedang digunakan).
+
+### 3. Bagan Akun Dapat Dikembangkan (Expandable Hierarchy & Sub-Accounts)
+- Struktur bagan akun mendukung multi-level hirarki (Level 1 Header, Level 2 Sub-Akun Induk, Level 3 Kelompok Akun, Level 4 Akun Detail Transaksi).
+- Fitur **+Sub** pada setiap baris akun untuk langsung mengembangkan sub-akun turunan di bawah akun induk yang dipilih dengan penomoran otomatis.
+
+### 4. Unggah Bukti Transaksi Format PDF pada Buku Besar (General Ledger)
+- Setiap transaksi pada Buku Besar dilengkapi tombol **Unggah Bukti PDF**.
+- **Ketentuan Satu Bukti untuk Seluruh Mutasi**: Jika satu transaksi voucher memiliki beberapa baris mutasi akun (misalnya Debit Kas, Kredit Penjualan, Kredit PPN), cukup **satu berkas PDF yang diunggah**, dan bukti tersebut otomatis terhubung dan tampil pada seluruh buku besar akun terkait.
+- Bukti PDF yang diunggah dapat langsung **Buka PDF (Preview di Tab Baru)** dan **Unduh File PDF**.
+
+### 5. Pengaturan Akses Server LAN Dapat Diedit
+- Port server (default: 4000) dan host binding (0.0.0.0 / 127.0.0.1) dapat diubah langsung melalui antarmuka aplikasi di menu **Server LAN & Backup**.
+- Tersedia opsi penamaan alias / DNS jaringan lokal (misal: `http://server-akuntansi.local:4000`).
+
+### 6. Otomasi Pembuatan Installer Windows di GitHub (GitHub Actions)
+- Repositori telah dilengkapi alur kerja otomatis `.github/workflows/build-windows-installer.yml`.
+- Setiap pembaruan yang didorong ke GitHub Actions akan secara otomatis mengompilasi Inno Setup Compiler dan menghasilkan berkas installer mandiri:
+  `Setup-Coretax-Accounting-Enterprise-x64.exe`
+- Berkas installer dapat diunduh langsung dari tab **Actions Artifacts** atau rilis GitHub.
 
 ---
 

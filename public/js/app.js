@@ -1,6 +1,7 @@
 /**
  * Coretax Enterprise Accounting Application
  * Master State & Controller
+ * Credit by Harry Sunaryo
  */
 
 window.App = {
@@ -8,13 +9,128 @@ window.App = {
   entities: [],
   currentRoute: 'dashboard',
   lanInfo: null,
+  currentUser: null,
 
   init: async function() {
-    console.log('Initializing Coretax Enterprise Accounting System...');
+    console.log('Initializing Coretax Enterprise Accounting System - Credit by Harry Sunaryo...');
+    this.initAuth();
     await this.loadLanInfo();
     await this.loadEntities();
     this.setupEventListeners();
-    this.navigate(window.location.hash.replace('#', '') || 'dashboard');
+
+    if (this.currentUser) {
+      this.navigate(window.location.hash.replace('#', '') || 'dashboard');
+    }
+  },
+
+  initAuth: function() {
+    const saved = localStorage.getItem('coretax_user');
+    if (saved) {
+      try {
+        this.currentUser = JSON.parse(saved);
+      } catch (e) {
+        this.currentUser = null;
+      }
+    }
+
+    const overlay = document.getElementById('login-screen-overlay');
+    if (!this.currentUser) {
+      if (overlay) overlay.style.display = 'flex';
+    } else {
+      if (overlay) overlay.style.display = 'none';
+      this.updateHeaderUserUI();
+      this.filterSidebarNav();
+    }
+  },
+
+  handleLogin: async function(e) {
+    e.preventDefault();
+    const username = document.getElementById('login-username')?.value.trim();
+    const password = document.getElementById('login-password')?.value;
+    const alertEl = document.getElementById('login-error-alert');
+    const submitBtn = document.getElementById('btn-login-submit');
+
+    if (!username || !password) return;
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span>⏳</span> Memeriksa Kredensial...`;
+    }
+    if (alertEl) alertEl.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Username atau password tidak valid');
+
+      this.currentUser = data.user;
+      localStorage.setItem('coretax_user', JSON.stringify(this.currentUser));
+
+      const overlay = document.getElementById('login-screen-overlay');
+      if (overlay) overlay.style.display = 'none';
+
+      this.updateHeaderUserUI();
+      this.filterSidebarNav();
+      this.toast(`Selamat datang, ${this.currentUser.name}!`, 'success');
+      this.navigate(window.location.hash.replace('#', '') || 'dashboard');
+    } catch (err) {
+      if (alertEl) {
+        alertEl.textContent = err.message;
+        alertEl.style.display = 'block';
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>🔐</span> Masuk ke Sistem (Log In)`;
+      }
+    }
+  },
+
+  logout: function() {
+    if (!confirm('Apakah Anda yakin ingin keluar dari sistem?')) return;
+    localStorage.removeItem('coretax_user');
+    this.currentUser = null;
+    const overlay = document.getElementById('login-screen-overlay');
+    if (overlay) overlay.style.display = 'flex';
+  },
+
+  updateHeaderUserUI: function() {
+    const nameEl = document.getElementById('header-user-display');
+    const roleEl = document.getElementById('header-role-display');
+    if (nameEl && this.currentUser) {
+      nameEl.textContent = this.currentUser.name || this.currentUser.username;
+    }
+    if (roleEl && this.currentUser) {
+      roleEl.textContent = this.currentUser.role || 'USER';
+    }
+  },
+
+  hasAccess: function(route) {
+    if (!this.currentUser) return false;
+    const perms = this.currentUser.permissions || [];
+    if (perms.includes('*') || this.currentUser.role === 'ADMIN' || this.currentUser.username.toLowerCase() === 'administrator') {
+      return true;
+    }
+    return perms.includes(route);
+  },
+
+  filterSidebarNav: function() {
+    if (!this.currentUser) return;
+    document.querySelectorAll('.nav-item').forEach(el => {
+      const route = el.getAttribute('data-route');
+      if (route && !this.hasAccess(route)) {
+        el.style.opacity = '0.4';
+        el.title = 'Akses dibatasi oleh Administrator';
+      } else {
+        el.style.opacity = '1';
+        el.title = '';
+      }
+    });
   },
 
   loadLanInfo: async function() {
@@ -22,9 +138,14 @@ window.App = {
       const res = await fetch('/api/system/lan-info');
       this.lanInfo = await res.json();
       const lanEl = document.getElementById('lan-server-status');
-      if (lanEl && this.lanInfo.lanAddresses.length > 0) {
-        lanEl.innerHTML = `<span class="lan-dot"></span> LAN: ${this.lanInfo.lanAddresses[0].ip}:4000`;
-        lanEl.title = `Server LAN Aktif. Tersedia di: ${this.lanInfo.lanAddresses.map(a => a.url).join(', ')}`;
+      const port = this.lanInfo.port || 4000;
+      if (lanEl) {
+        if (this.lanInfo.lanAddresses.length > 0) {
+          lanEl.innerHTML = `<span class="lan-dot"></span> LAN: ${this.lanInfo.lanAddresses[0].ip}:${port}`;
+          lanEl.title = `Server LAN Aktif. Tersedia di: ${this.lanInfo.lanAddresses.map(a => a.url).join(', ')}. Klik untuk mengedit pengaturan LAN.`;
+        } else {
+          lanEl.innerHTML = `<span class="lan-dot"></span> LAN: :${port}`;
+        }
       }
     } catch (e) {
       console.warn('LAN Info not available:', e);
@@ -79,6 +200,27 @@ window.App = {
     this.currentRoute = route;
     window.location.hash = route;
 
+    // Check Access Permission
+    if (!this.hasAccess(route)) {
+      const contentArea = document.getElementById('main-content-view');
+      if (contentArea) {
+        contentArea.innerHTML = `
+          <div style="padding: 60px 20px; text-align: center;">
+            <div style="font-size: 56px; margin-bottom: 14px;">🔒</div>
+            <h2 style="color: #002B49; margin-bottom: 8px;">Akses Modul Dibatasi</h2>
+            <p style="color: #64748B; max-width: 520px; margin: 0 auto 20px auto; font-size: 13.5px; line-height: 1.6;">
+              Akun Anda (<strong>${this.currentUser?.name || this.currentUser?.username}</strong> - Role: <strong>${this.currentUser?.role}</strong>) tidak memiliki hak akses untuk membuka modul <strong>"${route}"</strong>.<br>
+              Silakan hubungi Administrator untuk memperluas batasan hak akses Anda.
+            </p>
+            <button class="btn btn-primary" onclick="App.navigate('dashboard')">
+              <span>📊</span> Kembali ke Dashboard Eksekutif
+            </button>
+          </div>
+        `;
+      }
+      return;
+    }
+
     // Update active nav in sidebar
     document.querySelectorAll('.nav-item').forEach(el => {
       if (el.getAttribute('data-route') === route) {
@@ -131,6 +273,9 @@ window.App = {
         break;
       case 'backup':
         Modules.Entity.renderBackup(contentArea);
+        break;
+      case 'users':
+        Modules.Users.render(contentArea);
         break;
       default:
         Modules.Dashboard.render(contentArea);

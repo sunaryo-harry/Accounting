@@ -1,7 +1,8 @@
 ; Inno Setup Script for Coretax Enterprise Accounting
 #define MyAppName "Coretax Enterprise Accounting"
 #define MyAppVersion "2.6.0"
-#define MyAppPublisher "PT Multi Entitas Indonesia"
+#define MyAppPublisher "Harry Sunaryo"
+#define MyAppComments "Credit by Harry Sunaryo"
 #define MyAppURL "https://github.com/sunaryo-harry/Accounting"
 #define MyAppExeName "start-server.bat"
 
@@ -10,6 +11,7 @@ AppId={{7FCD77B2-9BCB-4CCF-AF6A-71D0F17F53B3}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
+AppComments={#MyAppComments}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}

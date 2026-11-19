@@ -135,4 +135,56 @@ router.delete('/:id', (req, res) => {
   }
 });
 
+// BATCH IMPORT Fixed Assets
+router.post('/import', (req, res) => {
+  try {
+    const entityId = req.body.entity_id || getActiveEntityId();
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Tidak ada data aktiva tetap untuk diimpor' });
+    }
+
+    const insertStmt = db.prepare(`
+      INSERT INTO fixed_assets (id, entity_id, code, name, category, acquisition_date, acquisition_cost, salvage_value, commercial_method, commercial_useful_life_years, fiscal_group, fiscal_method, fiscal_rate, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let imported = 0;
+    db.exec('BEGIN TRANSACTION;');
+    try {
+      items.forEach(a => {
+        if (!a.name || !a.acquisition_cost) return;
+        const code = a.code ? String(a.code).trim() : `AST-${Math.floor(1000 + Math.random() * 9000)}`;
+        const id = 'AST-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(Math.random() * 1000);
+
+        insertStmt.run(
+          id,
+          entityId,
+          code,
+          String(a.name).trim(),
+          a.category || 'Peralatan Kantor',
+          a.acquisition_date || new Date().toISOString().slice(0, 10),
+          Number(a.acquisition_cost) || 0,
+          Number(a.salvage_value) || 0,
+          a.commercial_method || 'STRAIGHT_LINE',
+          Number(a.commercial_useful_life_years) || 4,
+          a.fiscal_group || 'GOL1',
+          a.fiscal_method || 'STRAIGHT_LINE',
+          Number(a.fiscal_rate) || 25,
+          a.notes || ''
+        );
+        imported++;
+      });
+      db.exec('COMMIT;');
+      res.json({ success: true, count: imported, message: `Berhasil mengimpor ${imported} data aktiva tetap!` });
+    } catch (txErr) {
+      db.exec('ROLLBACK;');
+      throw txErr;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

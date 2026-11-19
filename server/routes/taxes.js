@@ -266,4 +266,59 @@ router.get('/spt-ppn-summary', (req, res) => {
   }
 });
 
+// BATCH IMPORT Tax Withholdings & Bukti Potong / Faktur Pajak
+router.post('/import', (req, res) => {
+  try {
+    const entityId = req.body.entity_id || getActiveEntityId();
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Tidak ada data bukti potong pajak untuk diimpor' });
+    }
+
+    const insertStmt = db.prepare(`
+      INSERT INTO tax_withholdings (id, entity_id, tax_type, period_month, period_year, bukti_potong_no, faktur_pajak_no, date, name, npwp, dpp, tax_rate, tax_amount, is_final, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let imported = 0;
+    db.exec('BEGIN TRANSACTION;');
+    try {
+      items.forEach(t => {
+        if (!t.tax_type || !t.dpp) return;
+        const id = 'TAX-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(Math.random() * 1000);
+        const dpp = Number(t.dpp) || 0;
+        const rate = Number(t.tax_rate) || 0;
+        const taxAmt = Number(t.tax_amount) || Math.round(dpp * (rate / 100));
+
+        insertStmt.run(
+          id,
+          entityId,
+          String(t.tax_type).trim().toUpperCase(),
+          parseInt(t.period_month) || new Date().getMonth() + 1,
+          parseInt(t.period_year) || 2026,
+          t.bukti_potong_no || null,
+          t.faktur_pajak_no || null,
+          t.date || new Date().toISOString().slice(0, 10),
+          t.name ? String(t.name).trim() : 'Lawan Transaksi',
+          t.npwp || null,
+          dpp,
+          rate,
+          taxAmt,
+          t.is_final ? 1 : 0,
+          t.notes || 'Import Bukti Pajak'
+        );
+        imported++;
+      });
+      db.exec('COMMIT;');
+      res.json({ success: true, count: imported, message: `Berhasil mengimpor ${imported} data bukti potong / faktur pajak!` });
+    } catch (txErr) {
+      db.exec('ROLLBACK;');
+      throw txErr;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

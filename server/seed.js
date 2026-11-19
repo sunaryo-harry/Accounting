@@ -1,6 +1,31 @@
 const { db } = require('./db');
 
+function seedUsers() {
+  try {
+    const checkAdmin = db.prepare(`SELECT COUNT(*) as count FROM users WHERE LOWER(username) = 'administrator'`).get();
+    if (checkAdmin.count === 0) {
+      db.prepare(`
+        INSERT INTO users (id, username, password, name, role, permissions, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        'USR-ADMIN-01',
+        'Administrator',
+        'Harry1175',
+        'Harry Sunaryo (System Administrator)',
+        'ADMIN',
+        JSON.stringify(['*']),
+        1
+      );
+      console.log('Master administrator seeded: Administrator / Harry1175 (Credit by Harry Sunaryo)');
+    }
+  } catch (err) {
+    console.error('Error seeding users:', err.message);
+  }
+}
+
 function seedDatabase() {
+  seedUsers();
+
   const checkEntity = db.prepare('SELECT COUNT(*) as count FROM entities').get();
   if (checkEntity.count > 0) {
     return; // Already seeded

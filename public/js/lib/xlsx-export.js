@@ -145,7 +145,7 @@ window.CoretaxExport = {
           <h2>${entity.name || 'PT PERUSAHAAN'}</h2>
           <p>NPWP: ${entity.npwp || '-'} | KPP: ${entity.kpp || '-'}</p>
           <h3 style="margin-top: 8px; font-size: 13pt; text-decoration: underline;">${title || 'LAPORAN KEUANGAN'}</h3>
-          <p style="font-size: 8.5pt; color: #555;">Dicetak pada: ${new Date().toLocaleString('id-ID')} | Sistem Akuntansi Terpadu Coretax</p>
+          <p style="font-size: 8.5pt; color: #555;">Dicetak pada: ${new Date().toLocaleString('id-ID')} | Coretax Enterprise &bull; Credit by Harry Sunaryo</p>
         </div>
       `;
     }

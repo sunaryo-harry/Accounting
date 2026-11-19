@@ -29,6 +29,9 @@ Modules.Journals = {
             </div>
           </div>
           <div class="page-actions">
+            <button class="btn btn-outline" onclick="CoretaxImporter.showImportModal('journals', () => Modules.Journals.render(document.getElementById('main-content-view')))">
+              <span>📥</span> Template & Impor Jurnal
+            </button>
             <button class="btn btn-gold" onclick="Modules.Journals.showAddJournalModal()">
               <span>➕</span> Buat Entri Jurnal Baru
             </button>

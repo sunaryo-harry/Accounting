@@ -231,6 +231,10 @@ Modules.Dashboard = {
             </div>
           </div>
         </div>
+
+        <div style="text-align: center; margin-top: 24px; padding: 14px; font-size: 12px; color: #64748B; border-top: 1px solid #E2E8F0;">
+          <strong style="color: #002B49;">CORETAX ACCOUNTING SYSTEM ENTERPRISE</strong> &bull; <span style="color: #D97706; font-weight: 700;">Credit by Harry Sunaryo</span>
+        </div>
       `;
     } catch (err) {
       container.innerHTML = `<div class="stat-card accent-red" style="padding: 20px;">Gagal memuat data dashboard: ${err.message}</div>`;

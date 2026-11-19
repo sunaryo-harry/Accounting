@@ -3,10 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Coretax Enterprise Accounting - Multi Entitas & Perpajakan Terpadu</title>
+  <title>Coretax Enterprise Accounting - Credit by Harry Sunaryo</title>
   <link rel="stylesheet" href="/css/coretax.css">
 </head>
 <body>
+
+  <!-- LOGIN SCREEN OVERLAY -->
+  <div id="login-screen-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(135deg, #001B30 0%, #002B49 50%, #0B3B60 100%); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: #FFFFFF; width: 100%; max-width: 440px; border-radius: 8px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); overflow: hidden; border-top: 5px solid #F59E0B;">
+      <div style="background: #002B49; padding: 24px 28px; text-align: center; color: #FFFFFF;">
+        <div style="display: inline-flex; width: 52px; height: 52px; background: #F59E0B; border-radius: 8px; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; color: #002B49; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+          CT
+        </div>
+        <div style="font-size: 18px; font-weight: 800; letter-spacing: 0.5px;">CORETAX ACCOUNTING SYSTEM</div>
+        <div style="font-size: 12px; color: #94A3B8; margin-top: 4px;">Sistem Akuntansi Enterprise Multi Entitas</div>
+        <div style="margin-top: 8px; display: inline-block; background: rgba(245, 158, 11, 0.2); color: #FBBF24; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; border: 1px solid rgba(245, 158, 11, 0.4);">
+          ✨ Credit by Harry Sunaryo
+        </div>
+      </div>
+
+      <div style="padding: 28px;">
+        <div id="login-error-alert" class="stat-card accent-red" style="display: none; padding: 10px; font-size: 12px; margin-bottom: 16px;"></div>
+
+        <form id="app-login-form" onsubmit="App.handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700; color: #002B49;">Nama Pengguna (Username)</label>
+            <input type="text" id="login-username" class="form-control" placeholder="Contoh: Administrator" value="Administrator" required autocomplete="username">
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label class="form-label" style="font-weight: 700; color: #002B49;">Kata Sandi (Password)</label>
+            <input type="password" id="login-password" class="form-control" placeholder="Masukkan kata sandi..." value="Harry1175" required autocomplete="current-password">
+          </div>
+
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 10px 12px; margin: 16px 0; font-size: 11.5px; color: #475569;">
+            💡 <strong>Akun Master Administrator:</strong><br>
+            Username: <code style="font-weight:700; color:#0B3B60;">Administrator</code> | Password: <code style="font-weight:700; color:#0B3B60;">Harry1175</code>
+          </div>
+
+          <button type="submit" id="btn-login-submit" class="btn btn-gold" style="width: 100%; justify-content: center; padding: 12px; font-size: 14px; font-weight: 700; margin-top: 8px;">
+            <span>🔐</span> Masuk ke Sistem (Log In)
+          </button>
+        </form>
+      </div>
+
+      <div style="background: #F1F5F9; padding: 12px; text-align: center; font-size: 11px; color: #64748B; border-top: 1px solid #E2E8F0;">
+        Coretax Enterprise v2.6 &bull; Developed by Harry Sunaryo
+      </div>
+    </div>
+  </div>
 
   <!-- TOP OFFICIAL CORETAX HEADER -->
   <header class="coretax-header">
@@ -16,6 +61,9 @@
         <div class="coretax-title-main">
           CORETAX ACCOUNTING SYSTEM
           <span class="coretax-badge-version">v2.6 ENTERPRISE</span>
+          <span style="font-size: 11px; font-weight: 700; color: #F59E0B; margin-left: 8px; background: rgba(0,0,0,0.25); padding: 2px 8px; border-radius: 10px;">
+            Credit by Harry Sunaryo
+          </span>
         </div>
         <div class="coretax-title-sub">
           Sistem Akuntansi, Keuangan, Persediaan & Kepatuhan Pajak Multi Entitas
@@ -34,8 +82,18 @@
       </div>
 
       <!-- LAN Server Status -->
-      <div id="lan-server-status" class="lan-pill" title="Server LAN Aktif">
+      <div id="lan-server-status" class="lan-pill" title="Server LAN Aktif" onclick="App.navigate('backup')" style="cursor: pointer;">
         <span class="lan-dot"></span> LAN: Memeriksa...
+      </div>
+
+      <!-- Logged-in User Pill -->
+      <div id="header-user-badge" style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.12); padding: 4px 10px; border-radius: 6px; font-size: 12px; color: #FFFFFF;">
+        <span>👤</span>
+        <span id="header-user-display" style="font-weight: 700;">Administrator</span>
+        <span id="header-role-display" class="badge badge-gold" style="font-size: 10px;">ADMIN</span>
+        <button class="btn btn-sm btn-outline" onclick="App.logout()" title="Keluar / Ganti Pengguna" style="padding: 2px 6px; font-size: 10.5px; border-color: rgba(255,255,255,0.4); color: #FFF;">
+          Keluar
+        </button>
       </div>
     </div>
   </header>
@@ -90,10 +148,21 @@
         <a class="nav-item" data-route="reports">
           <span class="icon">📈</span> Laporan Keuangan & Auditor
         </a>
+
+        <div class="nav-group-title">Sistem & Keamanan</div>
         <a class="nav-item" data-route="backup">
           <span class="icon">💾</span> Server LAN & Backup
         </a>
+        <a class="nav-item" data-route="users">
+          <span class="icon">👥</span> Manajemen Pengguna & Akses
+        </a>
       </nav>
+
+      <!-- SIDEBAR FOOTER CREDIT -->
+      <div style="padding: 14px 16px; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; text-align: center; background: rgba(0,0,0,0.15);">
+        <div style="color: #F59E0B; font-weight: 700; margin-bottom: 2px;">✨ Credit by Harry Sunaryo</div>
+        <div style="color: #94A3B8; font-size: 10px;">Coretax Enterprise Accounting</div>
+      </div>
     </aside>
 
     <!-- MAIN VIEWPORT -->
@@ -106,6 +175,7 @@
 
   <!-- SCRIPTS -->
   <script src="/js/lib/xlsx-export.js"></script>
+  <script src="/js/lib/importer.js"></script>
   <script src="/js/app.js"></script>
   <script src="/js/modules/dashboard.js"></script>
   <script src="/js/modules/coa.js"></script>
@@ -119,6 +189,7 @@
   <script src="/js/modules/spt1771.js"></script>
   <script src="/js/modules/reports.js"></script>
   <script src="/js/modules/entity.js"></script>
+  <script src="/js/modules/users.js"></script>
 
 </body>
 </html>

@@ -24,6 +24,9 @@ Modules.Taxes = {
             </div>
           </div>
           <div class="page-actions">
+            <button class="btn btn-outline" onclick="CoretaxImporter.showImportModal('taxes', () => Modules.Taxes.render(document.getElementById('main-content-view')))">
+              <span>📥</span> Template & Impor Bukti Pajak
+            </button>
             <button class="btn btn-gold" onclick="Modules.Taxes.showAddTaxModal()">
               <span>➕</span> Rekam Bukti Potong / Faktur Pajak
             </button>

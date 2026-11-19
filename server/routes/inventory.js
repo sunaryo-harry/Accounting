@@ -226,4 +226,68 @@ router.post('/transactions', (req, res) => {
   }
 });
 
+// BATCH IMPORT inventory items
+router.post('/import', (req, res) => {
+  try {
+    const entityId = req.body.entity_id || getActiveEntityId();
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Tidak ada data barang persediaan untuk diimpor' });
+    }
+
+    const defaultInvAcc = db.prepare(`SELECT id FROM accounts WHERE entity_id = ? AND code = '1108' LIMIT 1`).get(entityId);
+    const defaultCogsAcc = db.prepare(`SELECT id FROM accounts WHERE entity_id = ? AND code = '5101' LIMIT 1`).get(entityId);
+    const defaultSalesAcc = db.prepare(`SELECT id FROM accounts WHERE entity_id = ? AND code = '4101' LIMIT 1`).get(entityId);
+
+    const upsertStmt = db.prepare(`
+      INSERT INTO inventory_items (id, entity_id, sku, name, category, unit, cost_price, selling_price, current_stock, min_stock, valuation_method, inventory_account_id, cogs_account_id, sales_account_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        category = excluded.category,
+        unit = excluded.unit,
+        cost_price = excluded.cost_price,
+        selling_price = excluded.selling_price,
+        current_stock = excluded.current_stock,
+        min_stock = excluded.min_stock
+    `);
+
+    let imported = 0;
+    db.exec('BEGIN TRANSACTION;');
+    try {
+      items.forEach(it => {
+        if (!it.sku || !it.name) return;
+        const sku = String(it.sku).trim();
+        const id = `ITEM-${entityId}-${sku.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+        upsertStmt.run(
+          id,
+          entityId,
+          sku,
+          String(it.name).trim(),
+          it.category || 'Barang Dagang',
+          it.unit || 'PCS',
+          Number(it.cost_price) || 0,
+          Number(it.selling_price) || 0,
+          Number(it.current_stock) || 0,
+          Number(it.min_stock) || 5,
+          it.valuation_method || 'AVERAGE',
+          it.inventory_account_id || defaultInvAcc?.id || null,
+          it.cogs_account_id || defaultCogsAcc?.id || null,
+          it.sales_account_id || defaultSalesAcc?.id || null
+        );
+        imported++;
+      });
+      db.exec('COMMIT;');
+      res.json({ success: true, count: imported, message: `Berhasil mengimpor ${imported} data barang persediaan` });
+    } catch (txErr) {
+      db.exec('ROLLBACK;');
+      throw txErr;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -29,6 +29,9 @@ Modules.PSAK46 = {
             </div>
           </div>
           <div class="page-actions">
+            <button class="btn btn-outline" onclick="CoretaxImporter.showImportModal('psak46', () => Modules.PSAK46.render(document.getElementById('main-content-view')))">
+              <span>📥</span> Template & Impor Koreksi Fiskal
+            </button>
             <button class="btn btn-gold" onclick="Modules.PSAK46.showAddAdjustmentModal()">
               <span>➕</span> Tambah Koreksi Fiskal
             </button>

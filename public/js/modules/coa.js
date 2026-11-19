@@ -23,6 +23,9 @@ Modules.COA = {
             </div>
           </div>
           <div class="page-actions">
+            <button class="btn btn-outline" onclick="CoretaxImporter.showImportModal('coa', () => Modules.COA.render(document.getElementById('main-content-view')))">
+              <span>📥</span> Template & Impor Akun (COA)
+            </button>
             <button class="btn btn-gold" onclick="Modules.COA.showInitialBalancesModal()">
               <span>⚖️</span> Input / Edit Saldo Awal Entitas
             </button>
@@ -80,28 +83,46 @@ Modules.COA = {
       return `<tr><td colspan="9" class="text-center" style="padding: 20px;">Tidak ada data akun.</td></tr>`;
     }
 
-    return list.map(a => `
-      <tr data-code="${a.code}" data-name="${a.name.toLowerCase()}">
-        <td><strong>${a.code}</strong></td>
-        <td>
-          <strong>${a.name}</strong>
-          ${a.is_tax_deductible === 0 ? '<span class="badge badge-warning" style="margin-left: 6px;">Koreksi Fiskal Positif</span>' : ''}
-        </td>
-        <td><span class="badge badge-neutral">${a.category}</span></td>
-        <td>${a.sub_category || '-'}</td>
-        <td class="text-center">
-          <span class="badge ${a.normal_balance === 'DEBIT' ? 'badge-info' : 'badge-gold'}">${a.normal_balance}</span>
-        </td>
-        <td class="text-center">
-          ${a.is_tax_object ? `<span class="badge badge-success">${a.tax_type || 'OBJEK'}</span>` : '<span style="color:#94A3B8;">-</span>'}
-        </td>
-        <td class="text-right">${a.initial_debit > 0 ? App.formatIDR(a.initial_debit) : '-'}</td>
-        <td class="text-right">${a.initial_credit > 0 ? App.formatIDR(a.initial_credit) : '-'}</td>
-        <td class="text-center">
-          <button class="btn btn-sm btn-outline" onclick="Modules.COA.showEditAccountModal('${a.id}')">Edit</button>
-        </td>
-      </tr>
-    `).join('');
+    return list.map(a => {
+      const isSub = !!a.parent_code || (a.level && a.level > 1);
+      const indentPx = (a.level && a.level > 1) ? ((a.level - 1) * 16) : (a.parent_code ? 16 : 0);
+      return `
+        <tr data-code="${a.code}" data-name="${a.name.toLowerCase()}">
+          <td>
+            <div style="display: flex; align-items: center; gap: 4px; padding-left: ${indentPx}px;">
+              ${isSub ? '<span style="color: #64748B; font-weight: 700;">↳</span>' : ''}
+              <strong>${a.code}</strong>
+              <span class="badge badge-neutral" style="font-size: 9.5px; padding: 1px 4px;">L${a.level || 1}</span>
+            </div>
+          </td>
+          <td>
+            <strong style="color: ${isSub ? '#1E293B' : '#002B49'};">${a.name}</strong>
+            ${a.parent_code ? `<span style="font-size: 10px; color: #64748B; margin-left: 6px;">[Induk: ${a.parent_code}]</span>` : ''}
+            ${a.is_tax_deductible === 0 ? '<span class="badge badge-warning" style="margin-left: 6px;">Koreksi Fiskal Positif</span>' : ''}
+          </td>
+          <td><span class="badge badge-neutral">${a.category}</span></td>
+          <td>${a.sub_category || '-'}</td>
+          <td class="text-center">
+            <span class="badge ${a.normal_balance === 'DEBIT' ? 'badge-info' : 'badge-gold'}">${a.normal_balance}</span>
+          </td>
+          <td class="text-center">
+            ${a.is_tax_object ? `<span class="badge badge-success">${a.tax_type || 'OBJEK'}</span>` : '<span style="color:#94A3B8;">-</span>'}
+          </td>
+          <td class="text-right">${a.initial_debit > 0 ? App.formatIDR(a.initial_debit) : '-'}</td>
+          <td class="text-right">${a.initial_credit > 0 ? App.formatIDR(a.initial_credit) : '-'}</td>
+          <td class="text-center">
+            <div style="display: flex; gap: 4px; justify-content: center;">
+              <button class="btn btn-sm btn-gold" onclick="Modules.COA.showAddAccountModal('${a.code}', '${a.category}', '${a.normal_balance}')" title="Kembangkan / Buat Sub-Akun Turunan">
+                +Sub
+              </button>
+              <button class="btn btn-sm btn-outline" onclick="Modules.COA.showEditAccountModal('${a.id}')">
+                Edit
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
   },
 
   filterTable: function() {
@@ -110,17 +131,34 @@ Modules.COA = {
     document.getElementById('coa-table-body').innerHTML = this.renderRows(filtered);
   },
 
-  showAddAccountModal: function() {
+  showAddAccountModal: function(preParentCode = '', preCategory = '', preNormal = '') {
+    const parentOptions = this.accounts.map(a => `
+      <option value="${a.code}" ${a.code === preParentCode ? 'selected' : ''}>
+        [${a.code}] ${a.name}
+      </option>
+    `).join('');
+
+    const defaultCode = preParentCode ? `${preParentCode}-01` : '';
+
     const body = `
       <form id="form-add-acc">
+        <div class="form-group" style="background: #F8FAFC; border: 1px solid #CBD5E1; padding: 10px; border-radius: 6px;">
+          <label class="form-label font-weight-bold" style="color: #002B49;">Akun Induk / Hirarki (Struktur Pengembangan Akun):</label>
+          <select id="acc-parent" class="form-control" onchange="Modules.COA.onParentSelected(this.value)">
+            <option value="">-- Akun Utama / Header (Level 1 Tanpa Induk) --</option>
+            ${parentOptions}
+          </select>
+          <div style="font-size: 11px; color: #64748B; margin-top: 4px;">Pilih akun induk jika ingin membuat sub-akun turunan (Level 2, 3, atau 4).</div>
+        </div>
+
         <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px;">
           <div class="form-group">
             <label class="form-label">Kode Akun *</label>
-            <input type="text" id="acc-code" class="form-control" placeholder="Contoh: 1116" required>
+            <input type="text" id="acc-code" class="form-control" value="${defaultCode}" placeholder="Contoh: 1101-01" required>
           </div>
           <div class="form-group">
             <label class="form-label">Nama Akun *</label>
-            <input type="text" id="acc-name" class="form-control" placeholder="Contoh: Kas Operasional Cabang" required>
+            <input type="text" id="acc-name" class="form-control" placeholder="Contoh: Kas Kasir Operasional" required>
           </div>
         </div>
 
@@ -128,24 +166,24 @@ Modules.COA = {
           <div class="form-group">
             <label class="form-label">Kategori *</label>
             <select id="acc-category" class="form-control" required>
-              <option value="ASET_LANCAR">ASET_LANCAR</option>
-              <option value="ASET_TETAP">ASET_TETAP</option>
-              <option value="KEWAJIBAN_LANCAR">KEWAJIBAN_LANCAR</option>
-              <option value="KEWAJIBAN_JK_PANJANG">KEWAJIBAN_JK_PANJANG</option>
-              <option value="EKUITAS">EKUITAS</option>
-              <option value="PENDAPATAN">PENDAPATAN</option>
-              <option value="HPP">HPP</option>
-              <option value="BEBAN_OPERASIONAL">BEBAN_OPERASIONAL</option>
-              <option value="PENDAPATAN_LAIN">PENDAPATAN_LAIN</option>
-              <option value="BEBAN_LAIN">BEBAN_LAIN</option>
-              <option value="PAJAK">PAJAK</option>
+              <option value="ASET_LANCAR" ${preCategory === 'ASET_LANCAR' ? 'selected' : ''}>ASET_LANCAR</option>
+              <option value="ASET_TETAP" ${preCategory === 'ASET_TETAP' ? 'selected' : ''}>ASET_TETAP</option>
+              <option value="KEWAJIBAN_LANCAR" ${preCategory === 'KEWAJIBAN_LANCAR' ? 'selected' : ''}>KEWAJIBAN_LANCAR</option>
+              <option value="KEWAJIBAN_JK_PANJANG" ${preCategory === 'KEWAJIBAN_JK_PANJANG' ? 'selected' : ''}>KEWAJIBAN_JK_PANJANG</option>
+              <option value="EKUITAS" ${preCategory === 'EKUITAS' ? 'selected' : ''}>EKUITAS</option>
+              <option value="PENDAPATAN" ${preCategory === 'PENDAPATAN' ? 'selected' : ''}>PENDAPATAN</option>
+              <option value="HPP" ${preCategory === 'HPP' ? 'selected' : ''}>HPP</option>
+              <option value="BEBAN_OPERASIONAL" ${preCategory === 'BEBAN_OPERASIONAL' ? 'selected' : ''}>BEBAN_OPERASIONAL</option>
+              <option value="PENDAPATAN_LAIN" ${preCategory === 'PENDAPATAN_LAIN' ? 'selected' : ''}>PENDAPATAN_LAIN</option>
+              <option value="BEBAN_LAIN" ${preCategory === 'BEBAN_LAIN' ? 'selected' : ''}>BEBAN_LAIN</option>
+              <option value="PAJAK" ${preCategory === 'PAJAK' ? 'selected' : ''}>PAJAK</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label">Saldo Normal *</label>
             <select id="acc-normal" class="form-control" required>
-              <option value="DEBIT">DEBIT</option>
-              <option value="KREDIT">KREDIT</option>
+              <option value="DEBIT" ${preNormal === 'DEBIT' ? 'selected' : ''}>DEBIT</option>
+              <option value="KREDIT" ${preNormal === 'KREDIT' ? 'selected' : ''}>KREDIT</option>
             </select>
           </div>
         </div>
@@ -184,13 +222,32 @@ Modules.COA = {
 
     const footer = `
       <button class="btn btn-outline" onclick="App.closeModal()">Batal</button>
-      <button class="btn btn-primary" onclick="Modules.COA.saveNewAccount()">Simpan Akun</button>
+      <button class="btn btn-primary" onclick="Modules.COA.saveNewAccount()">Simpan & Kembangkan Akun</button>
     `;
 
-    App.showModal('Tambah Akun Baru', body, footer);
+    App.showModal(preParentCode ? `Tambah Sub-Akun dari [${preParentCode}]` : 'Tambah Akun Baru', body, footer);
+  },
+
+  onParentSelected: function(parentCode) {
+    if (!parentCode) return;
+    const parent = this.accounts.find(a => a.code === parentCode);
+    if (!parent) return;
+
+    const catEl = document.getElementById('acc-category');
+    const normEl = document.getElementById('acc-normal');
+    const subEl = document.getElementById('acc-sub');
+    const codeEl = document.getElementById('acc-code');
+
+    if (catEl) catEl.value = parent.category;
+    if (normEl) normEl.value = parent.normal_balance;
+    if (subEl && !subEl.value) subEl.value = parent.sub_category || '';
+    if (codeEl && (!codeEl.value || !codeEl.value.startsWith(parentCode))) {
+      codeEl.value = `${parentCode}-01`;
+    }
   },
 
   saveNewAccount: async function() {
+    const parent_code = document.getElementById('acc-parent')?.value || '';
     const code = document.getElementById('acc-code')?.value.trim();
     const name = document.getElementById('acc-name')?.value.trim();
     const category = document.getElementById('acc-category')?.value;
@@ -212,6 +269,7 @@ Modules.COA = {
         body: JSON.stringify({
           entity_id: App.activeEntity.id,
           code, name, category, normal_balance: normal, sub_category: sub,
+          parent_code: parent_code || null,
           is_tax_deductible: deductible ? 1 : 0,
           is_tax_object: taxObject ? 1 : 0,
           tax_type: taxType || null
@@ -221,7 +279,7 @@ Modules.COA = {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
 
-      App.toast('Akun berhasil dibuat!', 'success');
+      App.toast(result.message || 'Akun berhasil dikembangkan!', 'success');
       App.closeModal();
       this.render(document.getElementById('main-content-view'));
     } catch (err) {

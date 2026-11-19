@@ -252,4 +252,103 @@ router.delete('/:id', (req, res) => {
   }
 });
 
+// BATCH IMPORT journals & vouchers (supports flat CSV rows or grouped objects)
+router.post('/import', (req, res) => {
+  try {
+    const entityId = req.body.entity_id || getActiveEntityId();
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Tidak ada data jurnal untuk diimpor' });
+    }
+
+    // Load account map by code for this entity
+    const accounts = db.prepare('SELECT id, code FROM accounts WHERE entity_id = ?').all(entityId);
+    const accMap = {};
+    accounts.forEach(a => {
+      accMap[a.code.toUpperCase()] = a.id;
+    });
+
+    // Group items by journal_number
+    const groups = {};
+    items.forEach((row, idx) => {
+      const jNo = (row.journal_number || `JU-IMP-${row.date || '2026'}-${Math.floor(idx / 2) + 1}`).trim();
+      if (!groups[jNo]) {
+        groups[jNo] = {
+          journal_number: jNo,
+          date: row.date || new Date().toISOString().slice(0, 10),
+          journal_type: row.journal_type || 'GENERAL',
+          reference_no: row.reference_no || '',
+          description: row.description || `Jurnal Impor ${jNo}`,
+          items: []
+        };
+      }
+      const codeKey = String(row.account_code || '').trim().toUpperCase();
+      const accountId = accMap[codeKey] || row.account_id;
+      if (accountId) {
+        groups[jNo].items.push({
+          account_id: accountId,
+          debit: Number(row.debit) || 0,
+          credit: Number(row.credit) || 0,
+          memo: row.memo || ''
+        });
+      }
+    });
+
+    let importedJournals = 0;
+    let skippedJournals = 0;
+
+    const insertJournalStmt = db.prepare(`
+      INSERT INTO journals (id, entity_id, journal_number, date, journal_type, reference_no, description, total_amount, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Import')
+    `);
+
+    const insertItemStmt = db.prepare(`
+      INSERT INTO journal_items (id, journal_id, account_id, debit, credit, memo)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    db.exec('BEGIN TRANSACTION;');
+    try {
+      for (const jNo of Object.keys(groups)) {
+        const j = groups[jNo];
+        if (j.items.length < 2) {
+          skippedJournals++;
+          continue; // Need at least 2 items
+        }
+
+        const totalDebit = j.items.reduce((sum, it) => sum + it.debit, 0);
+        const totalCredit = j.items.reduce((sum, it) => sum + it.credit, 0);
+
+        if (Math.abs(totalDebit - totalCredit) > 1.0) {
+          skippedJournals++;
+          continue; // Skip unbalanced
+        }
+
+        const journalId = 'JRN-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(Math.random() * 1000);
+        insertJournalStmt.run(journalId, entityId, j.journal_number, j.date, j.journal_type, j.reference_no, j.description, totalDebit);
+
+        j.items.forEach((it, idx) => {
+          const itemId = `JI-${journalId}-${idx + 1}`;
+          insertItemStmt.run(itemId, journalId, it.account_id, it.debit, it.credit, it.memo);
+        });
+
+        importedJournals++;
+      }
+      db.exec('COMMIT;');
+      res.json({
+        success: true,
+        count: importedJournals,
+        skipped: skippedJournals,
+        message: `Berhasil mengimpor ${importedJournals} jurnal voucher!` + (skippedJournals > 0 ? ` (${skippedJournals} dilewati karena kode akun tidak ditemukan atau tidak seimbang)` : '')
+      });
+    } catch (txErr) {
+      db.exec('ROLLBACK;');
+      throw txErr;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -25,6 +25,12 @@ Modules.AR_AP = {
             </div>
           </div>
           <div class="page-actions">
+            <button class="btn btn-outline" onclick="CoretaxImporter.showImportModal('invoices', () => Modules.AR_AP.render(document.getElementById('main-content-view')))">
+              <span>📥</span> Template & Impor Tagihan
+            </button>
+            <button class="btn btn-outline" onclick="CoretaxImporter.showImportModal('contacts', () => Modules.AR_AP.render(document.getElementById('main-content-view')))">
+              <span>📥</span> Template & Impor Kontak
+            </button>
             <button class="btn btn-gold" onclick="Modules.AR_AP.showAddInvoiceModal()">
               <span>➕</span> Buat Faktur Tagihan (${this.currentTab})
             </button>

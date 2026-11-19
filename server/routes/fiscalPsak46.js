@@ -208,4 +208,50 @@ router.delete('/adjustments/:id', (req, res) => {
   }
 });
 
+// BATCH IMPORT Fiscal Adjustments (PSAK 46 / Koreksi Fiskal)
+router.post('/import', (req, res) => {
+  try {
+    const entityId = req.body.entity_id || getActiveEntityId();
+    const { items, fiscal_year } = req.body;
+    const year = parseInt(fiscal_year) || 2026;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Tidak ada data koreksi fiskal untuk diimpor' });
+    }
+
+    const insertStmt = db.prepare(`
+      INSERT INTO fiscal_reconciliations (id, entity_id, fiscal_year, item_code, description, type, is_temporary, amount, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let imported = 0;
+    db.exec('BEGIN TRANSACTION;');
+    try {
+      items.forEach(f => {
+        if (!f.description || !f.amount) return;
+        const id = 'FISC-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(Math.random() * 1000);
+        insertStmt.run(
+          id,
+          entityId,
+          parseInt(f.fiscal_year) || year,
+          f.item_code || 'IMP',
+          String(f.description).trim(),
+          (f.type || 'POSITIF').toUpperCase(),
+          f.is_temporary ? 1 : 0,
+          Number(f.amount) || 0,
+          f.notes || ''
+        );
+        imported++;
+      });
+      db.exec('COMMIT;');
+      res.json({ success: true, count: imported, message: `Berhasil mengimpor ${imported} data koreksi fiskal & PSAK 46!` });
+    } catch (txErr) {
+      db.exec('ROLLBACK;');
+      throw txErr;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

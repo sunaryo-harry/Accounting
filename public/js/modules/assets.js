@@ -30,6 +30,9 @@ Modules.Assets = {
             </div>
           </div>
           <div class="page-actions">
+            <button class="btn btn-outline" onclick="CoretaxImporter.showImportModal('assets', () => Modules.Assets.render(document.getElementById('main-content-view')))">
+              <span>📥</span> Template & Impor Aktiva
+            </button>
             <button class="btn btn-gold" onclick="Modules.Assets.showAddAssetModal()">
               <span>➕</span> Tambah Aktiva Tetap
             </button>

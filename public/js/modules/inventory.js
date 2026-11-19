@@ -30,6 +30,9 @@ Modules.Inventory = {
             </div>
           </div>
           <div class="page-actions">
+            <button class="btn btn-outline" onclick="CoretaxImporter.showImportModal('inventory', () => Modules.Inventory.render(document.getElementById('main-content-view')))">
+              <span>📥</span> Template & Impor Persediaan
+            </button>
             <button class="btn btn-gold" onclick="Modules.Inventory.showTransactionModal()">
               <span>🔄</span> Catat Mutasi / Stock Opname
             </button>

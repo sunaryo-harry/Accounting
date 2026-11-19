@@ -25,11 +25,11 @@ router.get('/', (req, res) => {
   }
 });
 
-// CREATE account
+// CREATE account (Expanded with Parent Account & Hierarchy Level)
 router.post('/', (req, res) => {
   try {
     const entityId = req.body.entity_id || getActiveEntityId();
-    const { code, name, category, sub_category, normal_balance, is_tax_deductible, is_tax_object, tax_type } = req.body;
+    const { code, name, category, sub_category, normal_balance, parent_code, is_tax_deductible, is_tax_object, tax_type } = req.body;
 
     if (!code || !name || !category || !normal_balance) {
       return res.status(400).json({ error: 'Kode, Nama, Kategori, dan Saldo Normal wajib diisi' });
@@ -40,18 +40,34 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: `Kode akun ${code} sudah terdaftar pada entitas ini` });
     }
 
-    const id = `ACC-${entityId}-${code}`;
+    let calculatedLevel = 1;
+    if (parent_code) {
+      const parent = db.prepare('SELECT level FROM accounts WHERE entity_id = ? AND code = ?').get(entityId, parent_code);
+      if (parent) {
+        calculatedLevel = (parent.level || 1) + 1;
+      }
+    } else {
+      // Auto level based on code length or dots
+      if (code.includes('-') || code.includes('.')) {
+        calculatedLevel = code.split(/[-.]/).length;
+      } else if (code.length > 4) {
+        calculatedLevel = 2;
+      }
+    }
+
+    const id = `ACC-${entityId}-${code.replace(/[^a-zA-Z0-9]/g, '_')}`;
     db.prepare(`
-      INSERT INTO accounts (id, entity_id, code, name, category, sub_category, normal_balance, is_tax_deductible, is_tax_object, tax_type)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO accounts (id, entity_id, code, name, category, sub_category, normal_balance, parent_code, level, is_tax_deductible, is_tax_object, tax_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, entityId, code, name, category, sub_category || '', normal_balance,
+      parent_code || null, calculatedLevel,
       is_tax_deductible !== undefined ? (is_tax_deductible ? 1 : 0) : 1,
       is_tax_object !== undefined ? (is_tax_object ? 1 : 0) : 0,
       tax_type || null
     );
 
-    res.json({ success: true, id, message: 'Akun berhasil ditambahkan' });
+    res.json({ success: true, id, message: 'Akun berhasil ditambahkan dan dikembangkan ke dalam struktur bagan akun' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -61,15 +77,28 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { name, category, sub_category, normal_balance, is_tax_deductible, is_tax_object, tax_type } = req.body;
+    const { name, category, sub_category, normal_balance, parent_code, is_tax_deductible, is_tax_object, tax_type } = req.body;
+
+    const existing = db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
+    if (!existing) return res.status(404).json({ error: 'Akun tidak ditemukan' });
+
+    let calculatedLevel = existing.level || 1;
+    if (parent_code && parent_code !== existing.parent_code) {
+      const parent = db.prepare('SELECT level FROM accounts WHERE entity_id = ? AND code = ?').get(existing.entity_id, parent_code);
+      if (parent) {
+        calculatedLevel = (parent.level || 1) + 1;
+      }
+    }
 
     db.prepare(`
       UPDATE accounts SET
         name = ?, category = ?, sub_category = ?, normal_balance = ?,
+        parent_code = ?, level = ?,
         is_tax_deductible = ?, is_tax_object = ?, tax_type = ?
       WHERE id = ?
     `).run(
       name, category, sub_category || '', normal_balance,
+      parent_code || null, calculatedLevel,
       is_tax_deductible ? 1 : 0, is_tax_object ? 1 : 0, tax_type || null, id
     );
 
@@ -188,6 +217,86 @@ router.post('/initial-balances', (req, res) => {
       difference,
       isBalanced
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// BATCH IMPORT accounts & initial balances
+router.post('/import', (req, res) => {
+  try {
+    const entityId = req.body.entity_id || getActiveEntityId();
+    const { items, fiscal_year } = req.body;
+    const year = parseInt(fiscal_year) || 2026;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Tidak ada data akun yang dikirim untuk diimpor' });
+    }
+
+    const upsertAccount = db.prepare(`
+      INSERT INTO accounts (id, entity_id, code, name, category, sub_category, normal_balance, parent_code, level, is_tax_deductible, is_tax_object, tax_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        category = excluded.category,
+        sub_category = excluded.sub_category,
+        normal_balance = excluded.normal_balance,
+        parent_code = excluded.parent_code,
+        level = excluded.level,
+        is_tax_deductible = excluded.is_tax_deductible,
+        is_tax_object = excluded.is_tax_object,
+        tax_type = excluded.tax_type
+    `);
+
+    const upsertInitialBalance = db.prepare(`
+      INSERT INTO initial_balances (id, entity_id, account_id, debit, credit, fiscal_year, as_of_date)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        debit = excluded.debit,
+        credit = excluded.credit
+    `);
+
+    let importedCount = 0;
+    db.exec('BEGIN TRANSACTION;');
+    try {
+      items.forEach(a => {
+        if (!a.code || !a.name) return;
+        const code = String(a.code).trim();
+        const accId = `ACC-${entityId}-${code.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const category = a.category || 'BEBAN_OPERASIONAL';
+        const normal = (a.normal_balance || (['ASET_LANCAR', 'ASET_TETAP', 'BEBAN_OPERASIONAL', 'HPP', 'BEBAN_LAIN'].includes(category) ? 'DEBIT' : 'KREDIT')).toUpperCase();
+        const level = parseInt(a.level) || (code.includes('-') ? code.split('-').length : 1);
+
+        upsertAccount.run(
+          accId,
+          entityId,
+          code,
+          String(a.name).trim(),
+          category,
+          a.sub_category || '',
+          normal,
+          a.parent_code || null,
+          level,
+          a.is_tax_deductible !== undefined ? (Number(a.is_tax_deductible) === 0 ? 0 : 1) : 1,
+          a.is_tax_object ? 1 : 0,
+          a.tax_type || null
+        );
+
+        if (a.initial_debit !== undefined || a.initial_credit !== undefined) {
+          const d = Number(a.initial_debit) || 0;
+          const c = Number(a.initial_credit) || 0;
+          const ibId = `IB-${entityId}-${accId}`;
+          upsertInitialBalance.run(ibId, entityId, accId, d, c, year, `${year}-01-01`);
+        }
+
+        importedCount++;
+      });
+      db.exec('COMMIT;');
+      res.json({ success: true, count: importedCount, message: `Berhasil mengimpor/memperbarui ${importedCount} akun bagan akun` });
+    } catch (txErr) {
+      db.exec('ROLLBACK;');
+      throw txErr;
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

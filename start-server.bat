@@ -24,6 +24,11 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
+:: Bersihkan proses lama yang mungkin masih terkunci di port 4000
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :4000 ^| findstr LISTENING 2^>nul') do (
+    taskkill /F /PID %%a >nul 2>&1
+)
+
 :: Buka browser secara otomatis setelah 2 detik
 start http://localhost:4000 2>nul
 

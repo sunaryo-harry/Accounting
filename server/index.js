@@ -51,7 +51,7 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/system', require('./routes/backup'));
 
 // 404 handler for API routes - ALWAYS return JSON, never HTML
-app.all('/api/*', (req, res) => {
+app.use('/api', (req, res) => {
   res.status(404).json({ error: `API route tidak ditemukan: ${req.method} ${req.originalUrl}` });
 });
 
@@ -104,6 +104,15 @@ const server = app.listen(PORT, HOST, () => {
         exec(`start http://localhost:${PORT}`);
       }, 1000);
     } catch (e) {}
+  }
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[PERINGATAN] Port ${PORT} sedang digunakan oleh proses lain.`);
+    console.error(`Jalankan 'start-server.bat' untuk membersihkan proses lama dan memulai ulang.`);
+  } else {
+    console.error('Server error:', err.message);
   }
 });
 

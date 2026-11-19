@@ -45,10 +45,19 @@ window.App = {
 
   // Safe fetch helper to prevent "Unexpected token '<', <!DOCTYPE... is not valid JSON"
   fetchJson: async function(url, options = {}) {
-    const res = await fetch(url, options);
+    let res;
+    try {
+      res = await fetch(url, options);
+    } catch (netErr) {
+      throw new Error(`Koneksi ke backend gagal (${netErr.message}). Pastikan server aplikasi telah dijalankan.`);
+    }
+
     const contentType = res.headers.get('content-type') || '';
     if (!contentType.includes('application/json')) {
       const text = await res.text();
+      if (res.status === 404) {
+        throw new Error(`Endpoint API tidak ditemukan (HTTP 404). Kemungkinan server backend versi lama masih aktif di port 4000. Jalankan 'start-server.bat' untuk memuat versi terbaru.`);
+      }
       throw new Error(`Server backend tidak merespons JSON (HTTP ${res.status}). Pastikan server aplikasi telah berjalan normal.`);
     }
     const data = await res.json();

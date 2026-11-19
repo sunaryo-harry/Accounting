@@ -15,7 +15,7 @@ AppComments={#MyAppComments}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName=C:\CoretaxAccounting
+DefaultDirName={localappdata}\CoretaxAccounting
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=..\dist
@@ -23,8 +23,8 @@ OutputBaseFilename=Setup-Coretax-Accounting-Enterprise-x64
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
-PrivilegesRequired=admin
-PrivilegesRequiredOverridesAllowed=dialog
+PrivilegesRequired=lowest
+PrivilegesRequiredOverridesAllowed=dialog commandline
 CloseApplications=no
 
 [Languages]
@@ -34,19 +34,18 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Dirs]
-Name: "{app}"; Permissions: users-full
-Name: "{app}\database"; Permissions: users-full
-Name: "{app}\uploads"; Permissions: users-full
+Name: "{app}\database"
+Name: "{app}\uploads"
 
 [Files]
 Source: "..\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git\*,dist\*,installer\*,*.tmp,database\*.sqlite-wal,database\*.sqlite-shm"
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\{#MyAppName} (Jalankan di Latar Belakang)"; Filename: "{app}\AccountingEnterprise.vbs"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
+Name: "{group}\{#MyAppName} (Jalankan di Latar Belakang)"; Filename: "{app}\AccountingEnterprise.vbs"; WorkingDir: "{app}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; WorkingDir: "{app}"
 
 [Run]
-Filename: "netsh.exe"; Parameters: "advfirewall firewall add rule name=""Accounting Enterprise Server (Port 4000)"" dir=in action=allow protocol=TCP localport=4000"; Flags: runhidden
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: shellexec postinstall nowait skipifsilent
+Filename: "netsh.exe"; Parameters: "advfirewall firewall add rule name=""Accounting Enterprise Server (Port 4000)"" dir=in action=allow protocol=TCP localport=4000"; Flags: runhidden skipifnotsilent; Check: IsAdminLoggedOn
+Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: shellexec postinstall nowait skipifsilent

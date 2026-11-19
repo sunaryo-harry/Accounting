@@ -95,6 +95,16 @@ const server = app.listen(PORT, HOST, () => {
   console.log(`=======================================================`);
   console.log(`  Aplikasi siap digunakan di jaringan lokal (LAN)!`);
   console.log(`=======================================================`);
+
+  // Auto open browser on Windows when not in test mode
+  if (process.platform === 'win32' && process.env.NODE_ENV !== 'test' && !process.env.NO_BROWSER) {
+    try {
+      const { exec } = require('child_process');
+      setTimeout(() => {
+        exec(`start http://localhost:${PORT}`);
+      }, 1000);
+    } catch (e) {}
+  }
 });
 
 module.exports = { app, server };

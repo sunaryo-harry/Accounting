@@ -75,24 +75,30 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish to GitHub Release (If Tagged)
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v2.6.0
+          name: Release v2.6.0 - Coretax Enterprise Accounting
           files: |
             dist/*.exe
-            installer/*.exe
-          name: Release ${{ github.ref_name }} - Coretax Enterprise Accounting
           body: |
-            ## Coretax Enterprise Accounting System
+            ## Coretax Enterprise Accounting System (Windows Edition)
             **Credit by Harry Sunaryo**
 
-            ### 📦 Windows Installer
-            Download dan jalankan `Setup-Coretax-Accounting-Enterprise-x64.exe` untuk memasang server akuntansi enterprise di Windows:
-            - Login Administrator default: `Administrator` / `Harry1175`
-            - Akses Server LAN multi-user office
-            - Template impor data pada seluruh modul
-            - Manajemen multi entitas dapat diedit & dihapus
-            - Unggah bukti format PDF per transaksi buku besar
+            ### 🚀 Unduh & Pasang (Windows 64-bit)
+            Silakan unduh berkas installer langsung di bawah ini:
+            👉 **[Setup-Coretax-Accounting-Enterprise-x64.exe](https://github.com/sunaryo-harry/Accounting/releases/download/v2.6.0/Setup-Coretax-Accounting-Enterprise-x64.exe)**
+
+            ### 📋 Fitur & Pembaruan v2.6.0:
+            1. **Template Impor Data**: Tersedia format impor berkas untuk semua modul (Entitas, Akun/COA, Jurnal Umum, Buku Besar, Persediaan, Hutang & Piutang, Aset Tetap, Pajak, PSAK 46).
+            2. **Manajemen Multi Entitas**: Fitur edit dan hapus data entitas bisnis dengan proteksi integritas.
+            3. **Credit by Harry Sunaryo**: Tersemat pada navigasi header, footer, laporan PDF, dan halaman login.
+            4. **Konfigurasi Akses Server LAN**: Pengaturan port dan host dapat diedit langsung dari web.
+            5. **Autentikasi & Batasan User**: Login Administrator bawaan (`Administrator` / `Harry1175`) serta tambah pengguna dengan pembatasan hak akses modul.
+            6. **Chart of Accounts (COA) Bertingkat**: Akun dapat dikembangkan dengan akun induk dan sub-akun dinamis.
+            7. **Unggah Bukti PDF Transaksi Buku Besar**: Cukup unggah 1 bukti PDF untuk transaksi dengan banyak baris voucher buku besar yang sama, dilengkapi tombol lihat (view) dan unduh (download).
+            8. **Standalone Windows Installer**: Sudah dilengkapi Node.js runtime bawaan (siap pakai tanpa perlu instalasi Node.js manual).
           draft: false
           prerelease: false

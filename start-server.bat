@@ -25,10 +25,7 @@ if %errorlevel% neq 0 (
 )
 
 :: Buka browser secara otomatis setelah 2 detik
-start "" "%~dp0AccountingEnterprise.vbs" --browser-only 2>nul || (
-    timeout /t 2 /nobreak >nul
-    start http://localhost:4000
-)
+start http://localhost:4000 2>nul
 
 "%NODE_CMD%" server/index.js
 

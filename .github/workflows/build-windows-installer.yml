@@ -33,38 +33,34 @@ jobs:
         run: |
           npm ci --omit=dev
 
-      - name: Install Inno Setup Compiler
-        run: |
-          choco install innosetup --no-progress --yes
-
-      - name: Compile Inno Setup Installer
+      - name: Ensure Dist Directory Exists
         shell: powershell
         run: |
-          $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          if (-not (Test-Path $isccPath)) {
-            $isccPath = (Get-Command iscc.exe -ErrorAction SilentlyContinue)?.Source
-          }
-          if (-not $isccPath) {
-            Write-Error "ISCC.exe not found!"
-            exit 1
-          }
-          Write-Host "Compiling Inno Setup Script using: $isccPath"
-          & $isccPath "installer\InnoSetup-Script.iss"
+          if (-not (Test-Path dist)) { New-Item -ItemType Directory -Path dist }
+
+      - name: Compile Inno Setup Installer
+        uses: Minionguyjpro/Inno-Setup-Action@v1.3.0
+        with:
+          path: installer/InnoSetup-Script.iss
 
       - name: Verify Installer Artifact
         shell: powershell
         run: |
-          Get-ChildItem -Path installer\*.exe | Select-Object Name, Length, LastWriteTime
-          if (-not (Test-Path "installer\Setup-Coretax-Accounting-Enterprise-x64.exe")) {
-            Write-Error "Installer executable not found in installer directory!"
+          $found = Get-ChildItem -Path dist, installer -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue
+          $found | Select-Object FullName, Length, LastWriteTime
+          if (-not $found) {
+            Write-Error "Installer executable not found in dist or installer directory!"
             exit 1
           }
+          Write-Host "Installer successfully built: $($found[0].FullName)"
 
       - name: Upload Installer as Workflow Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Setup-Coretax-Accounting-Enterprise-Windows-x64
-          path: installer\Setup-Coretax-Accounting-Enterprise-x64.exe
+          path: |
+            dist/*.exe
+            installer/*.exe
           if-no-files-found: error
           retention-days: 30
 
@@ -72,7 +68,9 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: installer\Setup-Coretax-Accounting-Enterprise-x64.exe
+          files: |
+            dist/*.exe
+            installer/*.exe
           name: Release ${{ github.ref_name }} - Coretax Enterprise Accounting
           body: |
             ## Coretax Enterprise Accounting System

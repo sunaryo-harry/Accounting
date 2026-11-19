@@ -18,7 +18,7 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\CoretaxAccounting
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
-OutputDir=.
+OutputDir=..\dist
 OutputBaseFilename=Setup-Coretax-Accounting-Enterprise-x64
 Compression=lzma
 SolidCompression=yes
@@ -31,7 +31,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "..\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git\*,node_modules\*,*.tmp"
+Source: "..\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git\*,dist\*,installer\*,*.tmp,database\*.sqlite-wal,database\*.sqlite-shm"
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

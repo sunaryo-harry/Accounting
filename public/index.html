@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coretax Enterprise Accounting - Multi Entitas & Perpajakan Terpadu</title>
+  <link rel="stylesheet" href="/css/coretax.css">
+</head>
+<body>
+
+  <!-- TOP OFFICIAL CORETAX HEADER -->
+  <header class="coretax-header">
+    <div class="coretax-brand">
+      <div class="coretax-emblem">CT</div>
+      <div class="coretax-titles">
+        <div class="coretax-title-main">
+          CORETAX ACCOUNTING SYSTEM
+          <span class="coretax-badge-version">v2.6 ENTERPRISE</span>
+        </div>
+        <div class="coretax-title-sub">
+          Sistem Akuntansi, Keuangan, Persediaan & Kepatuhan Pajak Multi Entitas
+        </div>
+      </div>
+    </div>
+
+    <div class="coretax-header-controls">
+      <!-- Entity Selector -->
+      <div class="entity-selector-box">
+        <label for="header-entity-select">Entitas Aktif:</label>
+        <select id="header-entity-select" class="entity-select-dropdown">
+          <option value="">Memuat entitas...</option>
+        </select>
+        <span id="header-npwp-badge" class="entity-npwp-badge">NPWP: -</span>
+      </div>
+
+      <!-- LAN Server Status -->
+      <div id="lan-server-status" class="lan-pill" title="Server LAN Aktif">
+        <span class="lan-dot"></span> LAN: Memeriksa...
+      </div>
+    </div>
+  </header>
+
+  <!-- APP CONTAINER -->
+  <div class="app-container">
+    <!-- CORETAX SIDEBAR -->
+    <aside class="coretax-sidebar">
+      <nav class="sidebar-nav">
+        <div class="nav-group-title">Navigasi Utama</div>
+        <a class="nav-item active" data-route="dashboard">
+          <span class="icon">📊</span> Dashboard Eksekutif
+        </a>
+        <a class="nav-item" data-route="entities">
+          <span class="icon">🏢</span> Multi Entitas Perusahaan
+        </a>
+
+        <div class="nav-group-title">Bagan Akun & Jurnal</div>
+        <a class="nav-item" data-route="coa">
+          <span class="icon">📚</span> Bagan Akun & Saldo Awal
+        </a>
+        <a class="nav-item" data-route="journals">
+          <span class="icon">📝</span> Jurnal & Unggah Bukti
+        </a>
+        <a class="nav-item" data-route="ledger">
+          <span class="icon">📖</span> Buku Besar & File Bukti
+        </a>
+
+        <div class="nav-group-title">Operasional & Kontrol</div>
+        <a class="nav-item" data-route="inventory">
+          <span class="icon">📦</span> Persediaan & Kartu Stok
+        </a>
+        <a class="nav-item" data-route="ar_ap">
+          <span class="icon">👥</span> Kontrol Hutang & Piutang
+        </a>
+        <a class="nav-item" data-route="assets">
+          <span class="icon">🏢</span> Daftar Aktiva & Fiskal
+        </a>
+
+        <div class="nav-group-title">Perpajakan Indonesia</div>
+        <a class="nav-item" data-route="taxes">
+          <span class="icon">⚖️</span> Perpajakan & Equalisasi
+        </a>
+        <a class="nav-item" data-route="psak46">
+          <span class="icon">📑</span> Pajak Kini & PSAK 46
+        </a>
+        <a class="nav-item" data-route="spt1771">
+          <span class="icon">📋</span> SPT Tahunan Badan 1771
+        </a>
+
+        <div class="nav-group-title">Pelaporan & Audit</div>
+        <a class="nav-item" data-route="reports">
+          <span class="icon">📈</span> Laporan Keuangan & Auditor
+        </a>
+        <a class="nav-item" data-route="backup">
+          <span class="icon">💾</span> Server LAN & Backup
+        </a>
+      </nav>
+    </aside>
+
+    <!-- MAIN VIEWPORT -->
+    <main class="coretax-main">
+      <div id="main-content-view">
+        <!-- Content will be rendered by router -->
+      </div>
+    </main>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="/js/lib/xlsx-export.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/modules/dashboard.js"></script>
+  <script src="/js/modules/coa.js"></script>
+  <script src="/js/modules/journals.js"></script>
+  <script src="/js/modules/ledger.js"></script>
+  <script src="/js/modules/inventory.js"></script>
+  <script src="/js/modules/ar_ap.js"></script>
+  <script src="/js/modules/assets.js"></script>
+  <script src="/js/modules/taxes.js"></script>
+  <script src="/js/modules/psak46.js"></script>
+  <script src="/js/modules/spt1771.js"></script>
+  <script src="/js/modules/reports.js"></script>
+  <script src="/js/modules/entity.js"></script>
+
+</body>
+</html>

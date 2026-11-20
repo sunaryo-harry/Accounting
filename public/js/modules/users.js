@@ -18,6 +18,7 @@ Modules.Users = {
     { key: 'psak46', name: 'Pajak Kini & PSAK 46' },
     { key: 'spt1771', name: 'SPT Tahunan Badan 1771' },
     { key: 'reports', name: 'Laporan Keuangan & Auditor' },
+    { key: 'psak69', name: 'Penilaian KJPP & PSAK 69' },
     { key: 'backup', name: 'Server LAN & Backup Database' },
     { key: 'users', name: 'Manajemen Pengguna & Hak Akses' }
   ],

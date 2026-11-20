@@ -8,4 +8,5 @@ Thumbs.db
 database/temp/
 database/*.sqlite-wal
 database/*.sqlite-shm
+*.zip
 

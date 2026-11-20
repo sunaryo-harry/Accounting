@@ -46,6 +46,7 @@ app.use('/api/rp', require('./routes/receivablesPayables'));
 app.use('/api/assets', require('./routes/fixedAssets'));
 app.use('/api/taxes', require('./routes/taxes'));
 app.use('/api/psak46', require('./routes/fiscalPsak46'));
+app.use('/api/psak69', require('./routes/psak69'));
 app.use('/api/spt1771', require('./routes/spt1771'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/system', require('./routes/backup'));

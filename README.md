@@ -64,6 +64,26 @@ Setiap modul menyediakan unduhan template terformat rapi disertai data demonstra
 - **Voucher Jurnal Akuntansi Terintegrasi**: Setiap transaksi persediaan multi gudang memiliki nomor voucher unik berstandar akuntansi (`JU-INV-IN-...`, `JU-INV-OUT-...`, `JU-INV-TRF-...`, `JU-INV-ADJ-...`), terhubung langsung ke Buku Besar, dan mendukung unggah dokumen fisik PDF (Surat Jalan/BAP).
 - **Kartu Stok Multi Gudang**: Filter kartu stok per gudang atau konsolidasi seluruh perusahaan dengan saldo berjalan, biaya rata-rata, dan valuasi real-time.
 
+### 8. Modul Pelaporan KJPP & Penilaian Aset Biologis Sesuai PSAK 69 (SPI 2024)
+- **Master Aset Biologis & FVLCTS**:
+  - Pengelompokan Aset Biologis Menghasilkan (*Mature / Tanaman Menghasilkan - TM*) dan Belum Menghasilkan (*Immature / Tanaman Belum Menghasilkan - TBM*).
+  - Melacak komoditas perkebunan (Kelapa Sawit, Karet, Tebu, Kopi, Kakao), kehutanan, peternakan (Sapi Perah, Sapi Potong, Unggas), dan akuakultur.
+  - Pengukuran otomatis Nilai Wajar Dikurangi Biaya untuk Menjual (*Fair Value Less Costs to Sell - FVLCTS*).
+- **Kertas Kerja & Laporan Penilaian KJPP (Standar Penilaian Indonesia 2024)**:
+  - Pencatatan laporan penilai publik independen (No. Laporan, Tanggal Penilaian, Nama KJPP, No. Izin Penilai, dan Opini Penilaian).
+  - Pendekatan penilaian: Pendekatan Pendapatan (*Income Approach / DCF*), Pendekatan Pasar (*Market Approach*), dan Pendekatan Biaya Penggantian Terdepresiasi (*Depreciated Replacement Cost - DRC*).
+  - Unggah Laporan KJPP format PDF resmi langsung ke sistem.
+- **Auto-Jurnal Penyesuaian Nilai Wajar PSAK 69**:
+  - Tombol **Posting Jurnal Penyesuaian** langsung dari laporan KJPP yang disetujui.
+  - Otomatis membuat voucher jurnal penyesuaian: Debit/Kredit Aset Biologis (`1401`/`1402`) dan Kredit/Debit Keuntungan/Kerugian Nilai Wajar Aset Biologis (`7105`/`7205`) ke Laba Rugi periode berjalan.
+- **Laporan Rekonsiliasi Perubahan Nilai Tercatat Paragraf 50 PSAK 69**:
+  - Rekonsiliasi wajib: Saldo Awal + Penambahan/Pembelian + Biaya Pengembangan/Perawatan + Selisih Nilai Wajar Bersih (Perubahan Fisik vs Perubahan Harga sesuai Paragraf 51) - Pengurangan Akibat Panen - Pelepasan = Saldo Akhir.
+- **Simulator Model DCF & Analisis Sensitivitas KJPP**:
+  - Simulasi proyeksi arus kas diskonto (DCF) multi-tahun dengan parameter WACC (Tingkat Diskonto), Inflasi, Estimasi Biaya Menjual (*Costs to Sell*), dan Harga Komoditas.
+  - Matriks sensitivitas interaktif menguji ketahanan nilai wajar terhadap fluktuasi WACC ($\pm 1\%$) dan volatilitas harga komoditas ($\pm 5\%$ dan $\pm 10\%$).
+- **Laporan Pengungkapan CALK PSAK 69 & Paket Auditor**:
+  - Format siap audit untuk Catatan Atas Laporan Keuangan (CALK) lengkap dengan rincian kuantitatif, asumsi penting KJPP, hirarki nilai wajar Level 3, manajemen risiko keuangan agrikultur, ekspor Excel SpreadsheetML, dan cetak PDF A4.
+
 ---
 
 ## 🏛️ Fitur Utama & Keunggulan Sistem
@@ -207,6 +227,7 @@ F:\ACCOUNTING\
 │       ├── fixedAssets.js     # Perincian aktiva tetap & penyusutan fiskal Gol 1-4
 │       ├── taxes.js           # PPN, Withholding tax & kertas kerja equalisasi pajak
 │       ├── fiscalPsak46.js    # Rekonsiliasi fiskal, pajak kini & PSAK 46 (DTA/DTL)
+│       ├── psak69.js          # Penilaian KJPP & Aset Biologis PSAK 69 / SPI 2024
 │       ├── spt1771.js         # SPT Tahunan PPh Badan 1771 Induk & Lampiran I-VI
 │       ├── reports.js         # Neraca, Laba Rugi, Arus Kas, Ekuitas, TB, Rasio, CALK
 │       └── backup.js          # Info LAN server & download backup database SQLite
@@ -228,6 +249,7 @@ F:\ACCOUNTING\
 │           ├── assets.js      # Aktiva tetap & selisih penyusutan fiskal
 │           ├── taxes.js       # Pajak masa & tabel equalisasi omzet/biaya
 │           ├── psak46.js      # Rekonsiliasi laba fiskal & pajak tangguhan
+│           ├── psak69.js      # Laporan KJPP & Aset Biologis PSAK 69 (5 Tab Interaktif)
 │           ├── spt1771.js     # SPT 1771 Induk & Lampiran I s.d. VI
 │           ├── reports.js     # 7 Laporan keuangan & paket auditor independen
 │           └── entity.js      # Multi entitas & informasi koneksi server LAN

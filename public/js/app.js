@@ -290,6 +290,9 @@ window.App = {
       case 'reports':
         Modules.Reports.render(contentArea);
         break;
+      case 'psak69':
+        Modules.Psak69.render(contentArea);
+        break;
       case 'backup':
         Modules.Entity.renderBackup(contentArea);
         break;

@@ -72,7 +72,7 @@ window.CoretaxImporter = {
     },
 
     inventory: {
-      title: 'Persediaan Barang Dagang & Kartu Stok',
+      title: 'Persediaan Barang Dagang & Multi Gudang',
       endpoint: '/api/inventory/import',
       fields: [
         { key: 'sku', label: 'Kode SKU' },
@@ -82,12 +82,13 @@ window.CoretaxImporter = {
         { key: 'cost_price', label: 'Harga Pokok Beli (HPP)' },
         { key: 'selling_price', label: 'Harga Jual' },
         { key: 'current_stock', label: 'Jumlah Stok Awal' },
-        { key: 'min_stock', label: 'Batas Minimum Stok' }
+        { key: 'min_stock', label: 'Batas Minimum Stok' },
+        { key: 'warehouse_code', label: 'Kode Gudang (Opsional, misal: GDG-PST)' }
       ],
       sampleData: [
-        { sku: 'BRG-ELK-01', name: 'Monitor LED 24 Inch Full HD', category: 'Elektronik & IT', unit: 'UNIT', cost_price: '1450000', selling_price: '1850000', current_stock: '25', min_stock: '5' },
-        { sku: 'BRG-ELK-02', name: 'Keyboard Mekanikal USB RGB', category: 'Elektronik & IT', unit: 'PCS', cost_price: '320000', selling_price: '450000', current_stock: '50', min_stock: '10' },
-        { sku: 'BRG-ATK-05', name: 'Kertas HVS A4 80gr Rim', category: 'Alat Tulis Kantor', unit: 'BOX', cost_price: '210000', selling_price: '250000', current_stock: '40', min_stock: '8' }
+        { sku: 'BRG-ELK-01', name: 'Monitor LED 24 Inch Full HD', category: 'Elektronik & IT', unit: 'UNIT', cost_price: '1450000', selling_price: '1850000', current_stock: '25', min_stock: '5', warehouse_code: 'GDG-PST' },
+        { sku: 'BRG-ELK-02', name: 'Keyboard Mekanikal USB RGB', category: 'Elektronik & IT', unit: 'PCS', cost_price: '320000', selling_price: '450000', current_stock: '50', min_stock: '10', warehouse_code: 'GDG-CBG' },
+        { sku: 'BRG-ATK-05', name: 'Kertas HVS A4 80gr Rim', category: 'Alat Tulis Kantor', unit: 'BOX', cost_price: '210000', selling_price: '250000', current_stock: '40', min_stock: '8', warehouse_code: 'GDG-TRN' }
       ]
     },
 

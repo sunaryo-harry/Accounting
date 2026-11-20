@@ -54,6 +54,16 @@ Setiap modul menyediakan unduhan template terformat rapi disertai data demonstra
   `Setup-Coretax-Accounting-Enterprise-x64.exe`
 - Berkas installer dapat diunduh langsung dari tab **Actions Artifacts** atau rilis GitHub.
 
+### 7. Jurnal Persediaan Multi Gudang & Transfer Stok Antar Gudang
+- **Master Multi Gudang**: Mendukung pencatatan dan pengelolaan gudang tanpa batas per entitas (Gudang Utama/Pusat, Cabang Distribusi, Transit Logistik, Retur, dll.).
+- **Alur Mutasi Lengkap**:
+  - **Penerimaan Barang (IN)**: Menambah stok di gudang tujuan dan otomatis mendebit Persediaan serta mengkredit Kas/Bank/Hutang Usaha.
+  - **Pengeluaran Barang (OUT)**: Mengeluarkan stok dari gudang asal dengan validasi kecukupan stok, mendebit HPP/Beban Pemakaian dan mengkredit Persediaan.
+  - **Transfer Antar Gudang (TRANSFER)**: Memindahkan stok dari Gudang Asal ke Gudang Tujuan disertai surat jalan mutasi resmi dan otomatis membuat Voucher Jurnal Persediaan Antar Gudang.
+  - **Stock Opname (ADJUSTMENT)**: Menghitung selisih fisik aktual vs sistem per gudang, otomatis menjurnal selisih lebih (surplus) atau selisih kurang (defisit/kerusakan).
+- **Voucher Jurnal Akuntansi Terintegrasi**: Setiap transaksi persediaan multi gudang memiliki nomor voucher unik berstandar akuntansi (`JU-INV-IN-...`, `JU-INV-OUT-...`, `JU-INV-TRF-...`, `JU-INV-ADJ-...`), terhubung langsung ke Buku Besar, dan mendukung unggah dokumen fisik PDF (Surat Jalan/BAP).
+- **Kartu Stok Multi Gudang**: Filter kartu stok per gudang atau konsolidasi seluruh perusahaan dengan saldo berjalan, biaya rata-rata, dan valuasi real-time.
+
 ---
 
 ## 🏛️ Fitur Utama & Keunggulan Sistem
@@ -82,11 +92,12 @@ Setiap modul menyediakan unduhan template terformat rapi disertai data demonstra
 - Tombol **Lihat Bukti** langsung pada setiap baris mutasi untuk memeriksa dokumen sumber transaksi asli.
 - Filter berdasarkan akun, rentang tanggal, dan entitas.
 
-### 6. Persediaan (Inventory) & Kartu Stok
-- Master barang dagang lengkap dengan SKU, kategori, satuan, harga pokok (HPP), harga jual, dan batas peringatan stok minimum (*low stock alert*).
-- Mutasi barang: Penerimaan Barang (IN), Pengeluaran/Penjualan (OUT), dan Penyesuaian Fisik (*Stock Opname Adjustment*).
-- **Kartu Stok (Stock Card)** dengan metode penilaian rata-rata tertimbang (*Weighted Average*) dan FIFO, menampilkan kuantitas masuk, keluar, sisa stok, biaya rata-rata, dan total valuasi.
-- Otomatisasi jurnal persediaan dan beban pokok penjualan (HPP).
+### 6. Persediaan (Inventory) & Jurnal Multi Gudang
+- Master barang dagang lengkap dengan SKU, kategori, satuan, harga pokok (HPP), harga jual, batas peringatan stok minimum (*low stock alert*), dan pemetaan akun buku besar.
+- **Master Multi Gudang Terintegrasi**: Kelola gudang utama, cabang, transit, dan penanggung jawab (PIC) per entitas.
+- **Mutasi Stok & Transfer Antar Gudang**: Penerimaan Barang (IN), Pengeluaran/Penjualan (OUT), Transfer Antar Gudang (TRANSFER), dan Penyesuaian Fisik (*Stock Opname Adjustment*).
+- **Auto-Jurnal Persediaan & Lampiran Bukti PDF**: Otomatis menghasilkan voucher jurnal persediaan dan HPP berstandar PSAK lengkap dengan bukti surat jalan/BAP format PDF.
+- **Kartu Stok (Stock Card) Multi Gudang**: Pelacakan saldo berjalan, rata-rata tertimbang (*Weighted Average*), dan total valuasi per gudang maupun konsolidasi seluruh entitas.
 
 ### 7. Kontrol Hutang (AP) & Piutang (AR) Lengkap
 - Master Pelanggan (*Customer*) dan Pemasok (*Vendor*) lengkap dengan NPWP/NIK, alamat, dan syarat pembayaran (*Terms of Payment*).

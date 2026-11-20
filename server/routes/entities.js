@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../db');
+const { db, ensureDefaultWarehouses } = require('../db');
 
 // Helper to get active entity
 function getActiveEntityId() {
@@ -81,7 +81,11 @@ router.post('/', (req, res) => {
       });
     }
 
-    res.json({ success: true, id, message: 'Entitas baru dan bagan akun berhasil dibuat' });
+    if (typeof ensureDefaultWarehouses === 'function') {
+      ensureDefaultWarehouses();
+    }
+
+    res.json({ success: true, id, message: 'Entitas baru, bagan akun dan master gudang berhasil dibuat' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

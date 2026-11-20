@@ -105,17 +105,49 @@ function initSchema() {
       FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS warehouses (
+      id TEXT PRIMARY KEY,
+      entity_id TEXT NOT NULL,
+      code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      location TEXT,
+      pic TEXT,
+      inventory_account_id TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE,
+      FOREIGN KEY (inventory_account_id) REFERENCES accounts(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS inventory_warehouse_stocks (
+      id TEXT PRIMARY KEY,
+      entity_id TEXT NOT NULL,
+      item_id TEXT NOT NULL,
+      warehouse_id TEXT NOT NULL,
+      stock REAL DEFAULT 0,
+      FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE,
+      FOREIGN KEY (item_id) REFERENCES inventory_items(id) ON DELETE CASCADE,
+      FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE CASCADE,
+      UNIQUE(entity_id, item_id, warehouse_id)
+    );
+
     CREATE TABLE IF NOT EXISTS inventory_transactions (
       id TEXT PRIMARY KEY,
       entity_id TEXT NOT NULL,
       item_id TEXT NOT NULL,
       date TEXT NOT NULL,
-      tx_type TEXT NOT NULL, -- 'IN', 'OUT', 'ADJUSTMENT'
+      tx_type TEXT NOT NULL, -- 'IN', 'OUT', 'TRANSFER', 'ADJUSTMENT'
       qty REAL NOT NULL,
       unit_cost REAL NOT NULL,
       total_cost REAL NOT NULL,
+      warehouse_id TEXT,
+      from_warehouse_id TEXT,
+      to_warehouse_id TEXT,
+      contra_account_id TEXT,
       reference_no TEXT,
       notes TEXT,
+      attachment_path TEXT,
+      attachment_name TEXT,
       journal_id TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE,
@@ -262,11 +294,77 @@ function initSchema() {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // Migrate columns for inventory_transactions if table was already created earlier
+  try {
+    const invCols = db.prepare(`PRAGMA table_info(inventory_transactions)`).all().map(c => c.name);
+    if (!invCols.includes('warehouse_id')) {
+      db.exec(`ALTER TABLE inventory_transactions ADD COLUMN warehouse_id TEXT;`);
+    }
+    if (!invCols.includes('from_warehouse_id')) {
+      db.exec(`ALTER TABLE inventory_transactions ADD COLUMN from_warehouse_id TEXT;`);
+    }
+    if (!invCols.includes('to_warehouse_id')) {
+      db.exec(`ALTER TABLE inventory_transactions ADD COLUMN to_warehouse_id TEXT;`);
+    }
+    if (!invCols.includes('contra_account_id')) {
+      db.exec(`ALTER TABLE inventory_transactions ADD COLUMN contra_account_id TEXT;`);
+    }
+    if (!invCols.includes('attachment_path')) {
+      db.exec(`ALTER TABLE inventory_transactions ADD COLUMN attachment_path TEXT;`);
+    }
+    if (!invCols.includes('attachment_name')) {
+      db.exec(`ALTER TABLE inventory_transactions ADD COLUMN attachment_name TEXT;`);
+    }
+  } catch (mErr) {
+    console.error('Column migration note:', mErr.message);
+  }
+
+  ensureDefaultWarehouses();
+}
+
+function ensureDefaultWarehouses() {
+  try {
+    const entities = db.prepare('SELECT id FROM entities').all();
+    entities.forEach(ent => {
+      const whCount = db.prepare('SELECT COUNT(*) as count FROM warehouses WHERE entity_id = ?').get(ent.id);
+      if (whCount && whCount.count === 0) {
+        const wh1 = `WH-${ent.id}-01`;
+        const wh2 = `WH-${ent.id}-02`;
+        const wh3 = `WH-${ent.id}-03`;
+        db.prepare(`
+          INSERT INTO warehouses (id, entity_id, code, name, location, pic)
+          VALUES 
+          (?, ?, 'GDG-PST', 'Gudang Utama / Pusat (Jakarta)', 'Kawasan Industri Pulogadung Blok A-5, Jakarta Timur', 'Joko Susilo'),
+          (?, ?, 'GDG-CBG', 'Gudang Cabang / Distribusi (Surabaya)', 'Kawasan Industri Rungkut Kav. 12, Surabaya', 'Agus Prasetyo'),
+          (?, ?, 'GDG-TRN', 'Gudang Transit Logistik (Cikarang)', 'Cikarang Dry Port Terminal Hub, Cikarang', 'Hendra Setiawan')
+        `).run(wh1, ent.id, wh2, ent.id, wh3, ent.id);
+
+        // Also populate inventory_warehouse_stocks for existing items
+        const items = db.prepare('SELECT id, current_stock FROM inventory_items WHERE entity_id = ?').all(ent.id);
+        const stockStmt = db.prepare(`
+          INSERT OR REPLACE INTO inventory_warehouse_stocks (id, entity_id, item_id, warehouse_id, stock)
+          VALUES (?, ?, ?, ?, ?)
+        `);
+        items.forEach(it => {
+          const total = Number(it.current_stock) || 0;
+          const mainStock = Math.ceil(total * 0.7);
+          const branchStock = Math.max(0, total - mainStock);
+          stockStmt.run(`STK-${it.id}-${wh1}`, ent.id, it.id, wh1, mainStock);
+          stockStmt.run(`STK-${it.id}-${wh2}`, ent.id, it.id, wh2, branchStock);
+          stockStmt.run(`STK-${it.id}-${wh3}`, ent.id, it.id, wh3, 0);
+        });
+      }
+    });
+  } catch (err) {
+    console.error('Error ensuring default warehouses:', err.message);
+  }
 }
 
 initSchema();
 
 module.exports = {
   db,
-  dbPath
+  dbPath,
+  ensureDefaultWarehouses
 };

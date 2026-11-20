@@ -50,9 +50,10 @@ Modules.Journals = {
           <div class="table-header-toolbar">
             <div class="table-title"><span>📋</span> Riwayat Entri Jurnal</div>
             <div style="display: flex; gap: 8px;">
-              <select id="jrn-type-filter" class="form-control" style="width: 150px;" onchange="Modules.Journals.filterJournals()">
+              <select id="jrn-type-filter" class="form-control" style="width: 170px;" onchange="Modules.Journals.filterJournals()">
                 <option value="ALL">Semua Jenis Jurnal</option>
                 <option value="GENERAL">Jurnal Umum</option>
+                <option value="INVENTORY">Jurnal Persediaan</option>
                 <option value="SALES">Jurnal Penjualan</option>
                 <option value="PURCHASE">Jurnal Pembelian</option>
                 <option value="CASH_IN">Kas Masuk</option>
@@ -205,6 +206,7 @@ Modules.Journals = {
             <label class="form-label">Jenis Jurnal *</label>
             <select id="new-jrn-type" class="form-control">
               <option value="GENERAL">Jurnal Umum (General Journal)</option>
+              <option value="INVENTORY">Jurnal Persediaan (Multi Gudang / HPP)</option>
               <option value="SALES">Jurnal Penjualan</option>
               <option value="PURCHASE">Jurnal Pembelian</option>
               <option value="CASH_IN">Penerimaan Kas/Bank</option>

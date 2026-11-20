@@ -13,22 +13,62 @@ Modules.Inventory = {
   filterWarehouse: 'ALL',
   filterTxType: 'ALL',
 
+  // Safe helper getters to prevent "TypeError: ... is not a function"
+  getWarehouses: function() {
+    return Array.isArray(this.warehouses) ? this.warehouses : [];
+  },
+  getItems: function() {
+    return Array.isArray(this.items) ? this.items : [];
+  },
+  getJournals: function() {
+    return Array.isArray(this.journals) ? this.journals : [];
+  },
+  getAccounts: function() {
+    return Array.isArray(this.accounts) ? this.accounts : [];
+  },
+
   render: async function(container) {
     container.innerHTML = `<div style="padding: 24px; text-align: center;"><div class="loading-spinner"></div> Memuat Data Persediaan Multi Gudang...</div>`;
 
     try {
-      const [invRes, whRes, jrnRes, accRes] = await Promise.all([
-        fetch(`/api/inventory/items?entity_id=${App.activeEntity.id}`),
-        fetch(`/api/inventory/warehouses?entity_id=${App.activeEntity.id}`),
-        fetch(`/api/inventory/journals?entity_id=${App.activeEntity.id}`),
-        fetch(`/api/accounts?entity_id=${App.activeEntity.id}`)
+      const entityId = App.activeEntity?.id;
+      if (!entityId) {
+        throw new Error('Entitas perusahaan belum aktif atau belum dipilih. Silakan pilih entitas di bilah atas aplikasi.');
+      }
+
+      // Safe API fetcher with automatic JSON and status code validation
+      const fetchApi = async (url) => {
+        if (typeof App.fetchJson === 'function') {
+          return await App.fetchJson(url);
+        }
+        const res = await fetch(url);
+        if (!res.ok) {
+          const errObj = await res.json().catch(() => ({}));
+          throw new Error(errObj.error || `HTTP ${res.status}: Gagal memanggil endpoint ${url}`);
+        }
+        return await res.json();
+      };
+
+      const [invData, whData, jrnData, accData] = await Promise.all([
+        fetchApi(`/api/inventory/items?entity_id=${entityId}`),
+        fetchApi(`/api/inventory/warehouses?entity_id=${entityId}`),
+        fetchApi(`/api/inventory/journals?entity_id=${entityId}`),
+        fetchApi(`/api/accounts?entity_id=${entityId}`)
       ]);
 
-      const invData = await invRes.json();
-      this.items = invData.items || [];
-      this.warehouses = await whRes.json();
-      this.journals = await jrnRes.json();
-      this.accounts = await accRes.json();
+      this.items = Array.isArray(invData?.items) ? invData.items : (Array.isArray(invData) ? invData : []);
+      this.warehouses = Array.isArray(whData) ? whData : (Array.isArray(whData?.warehouses) ? whData.warehouses : []);
+      this.journals = Array.isArray(jrnData) ? jrnData : [];
+      this.accounts = Array.isArray(accData) ? accData : [];
+
+      const whList = this.getWarehouses();
+      const itList = this.getItems();
+      const jrnList = this.getJournals();
+
+      const totalStockVal = invData?.totalStockValue || itList.reduce((sum, it) => sum + (Number(it.total_valuation) || 0), 0);
+      const totalSKUCount = invData?.totalSKU || itList.length;
+      const lowStockCount = invData?.lowStockCount || itList.filter(it => it.is_low_stock).length;
+      const totalUnits = itList.reduce((sum, it) => sum + Number(it.current_stock || 0), 0);
 
       container.innerHTML = `
         <div class="page-header-bar">
@@ -71,38 +111,38 @@ Modules.Inventory = {
         <div class="grid-cards" style="margin-bottom: 20px;">
           <div class="stat-card accent-gold">
             <div class="stat-title">Total Valuasi Persediaan</div>
-            <div class="stat-value" style="color: #B45309;">${App.formatIDR(invData.totalStockValue || 0)}</div>
-            <div class="stat-sub">Konsolidasi Seluruh Gudang (${this.warehouses.length} Gudang)</div>
+            <div class="stat-value" style="color: #B45309;">${App.formatIDR(totalStockVal)}</div>
+            <div class="stat-sub">Konsolidasi Seluruh Gudang (${whList.length} Lokasi Gudang)</div>
           </div>
           <div class="stat-card accent-navy">
             <div class="stat-title">Jumlah Item / SKU Terdaftar</div>
-            <div class="stat-value">${invData.totalSKU || 0} SKU</div>
-            <div class="stat-sub">${this.items.reduce((sum, it) => sum + Number(it.current_stock || 0), 0)} Total Unit Fisik</div>
+            <div class="stat-value">${totalSKUCount} SKU</div>
+            <div class="stat-sub">${totalUnits} Total Unit Fisik Tersimpan</div>
           </div>
           <div class="stat-card accent-blue">
             <div class="stat-title">Master Multi Gudang</div>
-            <div class="stat-value" style="color: #0284C7;">${this.warehouses.length} Lokasi</div>
-            <div class="stat-sub">Pusat, Cabang Distribusi & Transit</div>
+            <div class="stat-value" style="color: #0284C7;">${whList.length} Lokasi</div>
+            <div class="stat-sub">Gudang Utama, Cabang Distribusi & Transit</div>
           </div>
           <div class="stat-card accent-red">
             <div class="stat-title">Peringatan Stok Minimum</div>
-            <div class="stat-value" style="color: ${invData.lowStockCount > 0 ? '#DC2626' : '#059669'};">
-              ${invData.lowStockCount || 0} Item
+            <div class="stat-value" style="color: ${lowStockCount > 0 ? '#DC2626' : '#059669'};">
+              ${lowStockCount} Item
             </div>
-            <div class="stat-sub">${invData.lowStockCount > 0 ? 'Perlu Restock Segera!' : 'Seluruh Stok Aman'}</div>
+            <div class="stat-sub">${lowStockCount > 0 ? 'Perlu Restock Segera!' : 'Seluruh Stok Aman'}</div>
           </div>
         </div>
 
         <!-- TAB NAVIGATION -->
         <div style="display: flex; gap: 4px; border-bottom: 2px solid #CBD5E1; margin-bottom: 16px;">
           <button id="tab-btn-items" class="btn ${this.activeTab === 'items' ? 'btn-primary' : 'btn-outline'}" style="border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none;" onclick="Modules.Inventory.switchTab('items')">
-            📦 Master Barang & Stok Multi Gudang
+            📦 Master Barang & Stok Multi Gudang (${itList.length})
           </button>
           <button id="tab-btn-warehouses" class="btn ${this.activeTab === 'warehouses' ? 'btn-primary' : 'btn-outline'}" style="border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none;" onclick="Modules.Inventory.switchTab('warehouses')">
-            🏢 Master Multi Gudang (${this.warehouses.length})
+            🏢 Master Multi Gudang (${whList.length})
           </button>
           <button id="tab-btn-journals" class="btn ${this.activeTab === 'journals' ? 'btn-primary' : 'btn-outline'}" style="border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none;" onclick="Modules.Inventory.switchTab('journals')">
-            📝 Jurnal & Mutasi Persediaan Multi Gudang (${this.journals.length})
+            📝 Jurnal & Mutasi Persediaan Multi Gudang (${jrnList.length})
           </button>
         </div>
 
@@ -112,7 +152,25 @@ Modules.Inventory = {
         </div>
       `;
     } catch (err) {
-      container.innerHTML = `<div class="stat-card accent-red">Gagal memuat persediaan: ${err.message}</div>`;
+      container.innerHTML = `
+        <div class="stat-card accent-red" style="padding: 20px; text-align: left; margin: 16px 0;">
+          <h3 style="color: #DC2626; margin-top: 0; font-size: 16px;">⚠️ Gagal Memuat Modul Persediaan Multi Gudang</h3>
+          <p style="margin-bottom: 12px; font-size: 13px;"><strong>Detail Kendala:</strong> ${err.message}</p>
+          <div style="background: #FFF5F5; border: 1px solid #FED7D7; padding: 12px; border-radius: 6px; font-size: 12px; color: #742A2A; line-height: 1.5;">
+            <strong>💡 Panduan Singkat:</strong><br>
+            Jika Anda baru saja memperbarui kode backend di komputer ini, server Node.js lokal di latar belakang perlu dimuat ulang agar rute API baru <code>/api/inventory/warehouses</code> aktif.
+            <ul style="margin: 6px 0 0 16px; padding: 0;">
+              <li>Jalankan kembali berkas <code>start-server.bat</code> di folder <code>F:\\ACCOUNTING</code>.</li>
+              <li>Kemudian klik tombol di bawah ini untuk memuat ulang modul.</li>
+            </ul>
+          </div>
+          <div style="margin-top: 14px;">
+            <button class="btn btn-primary" onclick="Modules.Inventory.render(document.getElementById('main-content-view'))">
+              🔄 Muat Ulang Persediaan
+            </button>
+          </div>
+        </div>
+      `;
     }
   },
 
@@ -147,14 +205,15 @@ Modules.Inventory = {
   // =============================================================
 
   renderItemsTab: function() {
+    const whList = this.getWarehouses();
     const whOptions = `<option value="ALL">Semua Gudang (Konsolidasi)</option>` + 
-      this.warehouses.map(w => `<option value="${w.id}" ${this.filterWarehouse === w.id ? 'selected' : ''}>[${w.code}] ${w.name}</option>`).join('');
+      whList.map(w => `<option value="${w.id}" ${this.filterWarehouse === w.id ? 'selected' : ''}>[${w.code}] ${w.name}</option>`).join('');
 
     return `
       <div class="card-table-wrapper">
         <div class="table-header-toolbar">
           <div class="table-title"><span>📋</span> Daftar Master Barang & Stok per Gudang</div>
-          <div style="display: flex; gap: 8px; align-items: center;">
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <select id="inv-wh-filter" class="form-control" style="width: 240px;" onchange="Modules.Inventory.changeWarehouseFilter(this.value)">
               ${whOptions}
             </select>
@@ -182,7 +241,7 @@ Modules.Inventory = {
               </tr>
             </thead>
             <tbody id="inv-table-body">
-              ${this.renderItemRows(this.items)}
+              ${this.renderItemRows(this.getItems())}
             </tbody>
           </table>
         </div>
@@ -198,7 +257,6 @@ Modules.Inventory = {
     const whFilter = this.filterWarehouse;
 
     return list.map(it => {
-      // Determine displayed stock based on warehouse filter
       let displayedStock = it.current_stock;
       let displayedValuation = it.total_valuation;
 
@@ -208,7 +266,6 @@ Modules.Inventory = {
         displayedValuation = displayedStock * it.cost_price;
       }
 
-      // Format badges for stock per warehouse
       const whBadges = (it.warehouse_stocks || []).map(ws => `
         <span class="badge ${ws.stock > 0 ? 'badge-neutral' : ''}" style="font-size: 11px; margin: 1px 2px; ${ws.stock === 0 ? 'opacity: 0.5; background: #E2E8F0;' : 'background: #E0F2FE; color: #0369A1;'}" title="${ws.warehouse_name}">
           <strong>${ws.warehouse_code}:</strong> ${ws.stock}
@@ -254,7 +311,7 @@ Modules.Inventory = {
 
   filterItems: function() {
     const q = document.getElementById('inv-search-input')?.value.toLowerCase() || '';
-    const filtered = this.items.filter(it => 
+    const filtered = this.getItems().filter(it => 
       it.sku.toLowerCase().includes(q) || 
       it.name.toLowerCase().includes(q) || 
       it.category.toLowerCase().includes(q)
@@ -303,11 +360,12 @@ Modules.Inventory = {
   },
 
   renderWarehouseRows: function() {
-    if (!this.warehouses || this.warehouses.length === 0) {
+    const whList = this.getWarehouses();
+    if (!whList || whList.length === 0) {
       return `<tr><td colspan="10" class="text-center" style="padding: 24px; color: #94A3B8;">Belum ada gudang yang terdaftar.</td></tr>`;
     }
 
-    return this.warehouses.map(w => `
+    return whList.map(w => `
       <tr>
         <td><strong style="color: #002B49;">${w.code}</strong></td>
         <td><strong>${w.name}</strong></td>
@@ -349,8 +407,9 @@ Modules.Inventory = {
   // =============================================================
 
   renderJournalsTab: function() {
+    const whList = this.getWarehouses();
     const whOptions = `<option value="ALL">Semua Gudang</option>` + 
-      this.warehouses.map(w => `<option value="${w.id}">[${w.code}] ${w.name}</option>`).join('');
+      whList.map(w => `<option value="${w.id}">[${w.code}] ${w.name}</option>`).join('');
 
     return `
       <div class="card-table-wrapper">
@@ -389,7 +448,7 @@ Modules.Inventory = {
               </tr>
             </thead>
             <tbody id="inv-journals-tbody">
-              ${this.renderJournalRows(this.journals)}
+              ${this.renderJournalRows(this.getJournals())}
             </tbody>
           </table>
         </div>
@@ -462,7 +521,7 @@ Modules.Inventory = {
     const txType = document.getElementById('jrn-tx-select')?.value || 'ALL';
     const q = document.getElementById('jrn-inv-search')?.value.toLowerCase() || '';
 
-    const filtered = this.journals.filter(j => {
+    const filtered = this.getJournals().filter(j => {
       const matchWh = (whId === 'ALL') || (j.warehouse_id === whId || j.from_warehouse_id === whId || j.to_warehouse_id === whId);
       const matchType = (txType === 'ALL') || (j.tx_type === txType);
       const matchQ = (
@@ -486,9 +545,18 @@ Modules.Inventory = {
   // 1. MODAL TRANSFER ANTAR GUDANG
   showTransferModal: function() {
     const today = new Date().toISOString().slice(0, 10);
-    const whOptionsFrom = this.warehouses.map(w => `<option value="${w.id}">[${w.code}] ${w.name}</option>`).join('');
-    const whOptionsTo = this.warehouses.map((w, idx) => `<option value="${w.id}" ${idx === 1 ? 'selected' : ''}>[${w.code}] ${w.name}</option>`).join('');
-    const itemOptions = this.items.map(it => `<option value="${it.id}">[${it.sku}] ${it.name}</option>`).join('');
+    const whList = this.getWarehouses();
+    const itemList = this.getItems();
+
+    if (whList.length < 2) {
+      alert('Dibutuhkan minimal 2 gudang untuk melakukan transfer antar gudang. Silakan tambahkan gudang terlebih dahulu pada Tab Master Multi Gudang.');
+      this.switchTab('warehouses');
+      return;
+    }
+
+    const whOptionsFrom = whList.map(w => `<option value="${w.id}">[${w.code}] ${w.name}</option>`).join('');
+    const whOptionsTo = whList.map((w, idx) => `<option value="${w.id}" ${idx === 1 ? 'selected' : ''}>[${w.code}] ${w.name}</option>`).join('');
+    const itemOptions = itemList.map(it => `<option value="${it.id}">[${it.sku}] ${it.name}</option>`).join('');
 
     const body = `
       <form id="form-transfer-stock" enctype="multipart/form-data">
@@ -575,7 +643,7 @@ Modules.Inventory = {
   updateTransferStockHint: function() {
     const fromWhId = document.getElementById('trf-from-wh')?.value;
     const itemId = document.getElementById('trf-item')?.value;
-    const item = this.items.find(it => it.id === itemId);
+    const item = this.getItems().find(it => it.id === itemId);
     const hintEl = document.getElementById('trf-stock-hint');
     const costEl = document.getElementById('trf-cost');
 
@@ -646,11 +714,14 @@ Modules.Inventory = {
   // 2. MODAL PENERIMAAN BARANG (IN)
   showInModal: function() {
     const today = new Date().toISOString().slice(0, 10);
-    const whOptions = this.warehouses.map(w => `<option value="${w.id}">[${w.code}] ${w.name}</option>`).join('');
-    const itemOptions = this.items.map(it => `<option value="${it.id}">[${it.sku}] ${it.name}</option>`).join('');
+    const whList = this.getWarehouses();
+    const itemList = this.getItems();
+    const accList = this.getAccounts();
+
+    const whOptions = whList.map(w => `<option value="${w.id}">[${w.code}] ${w.name}</option>`).join('');
+    const itemOptions = itemList.map(it => `<option value="${it.id}">[${it.sku}] ${it.name}</option>`).join('');
     
-    // Contra accounts: Hutang Usaha, Kas, Bank
-    const contraAccounts = this.accounts.filter(a => 
+    const contraAccounts = accList.filter(a => 
       a.category === 'KEWAJIBAN_LANCAR' || a.category === 'ASET_LANCAR'
     ).map(a => `<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('');
 
@@ -731,7 +802,7 @@ Modules.Inventory = {
 
   updateInCost: function() {
     const itemId = document.getElementById('in-item')?.value;
-    const item = this.items.find(it => it.id === itemId);
+    const item = this.getItems().find(it => it.id === itemId);
     const costEl = document.getElementById('in-cost');
     if (item && costEl) {
       costEl.value = item.cost_price;
@@ -790,11 +861,14 @@ Modules.Inventory = {
   // 3. MODAL PENGELUARAN BARANG (OUT)
   showOutModal: function() {
     const today = new Date().toISOString().slice(0, 10);
-    const whOptions = this.warehouses.map(w => `<option value="${w.id}">[${w.code}] ${w.name}</option>`).join('');
-    const itemOptions = this.items.map(it => `<option value="${it.id}">[${it.sku}] ${it.name}</option>`).join('');
+    const whList = this.getWarehouses();
+    const itemList = this.getItems();
+    const accList = this.getAccounts();
+
+    const whOptions = whList.map(w => `<option value="${w.id}">[${w.code}] ${w.name}</option>`).join('');
+    const itemOptions = itemList.map(it => `<option value="${it.id}">[${it.sku}] ${it.name}</option>`).join('');
     
-    // Contra accounts: Beban Pokok Penjualan (HPP) / Beban Operasional
-    const contraAccounts = this.accounts.filter(a => 
+    const contraAccounts = accList.filter(a => 
       a.category === 'HPP' || a.category === 'BEBAN_OPERASIONAL'
     ).map(a => `<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('');
 
@@ -872,7 +946,7 @@ Modules.Inventory = {
   updateOutStockHint: function() {
     const whId = document.getElementById('out-wh')?.value;
     const itemId = document.getElementById('out-item')?.value;
-    const item = this.items.find(it => it.id === itemId);
+    const item = this.getItems().find(it => it.id === itemId);
     const hintEl = document.getElementById('out-stock-hint');
 
     if (item && hintEl) {
@@ -932,11 +1006,13 @@ Modules.Inventory = {
   // 4. MODAL STOCK OPNAME / PENYESUAIAN
   showOpnameModal: function() {
     const today = new Date().toISOString().slice(0, 10);
-    const whOptions = this.warehouses.map(w => `<option value="${w.id}">[${w.code}] ${w.name}</option>`).join('');
-    const itemOptions = this.items.map(it => `<option value="${it.id}">[${it.sku}] ${it.name}</option>`).join('');
-    
-    // Accounts for adjustment
-    const adjAccounts = this.accounts.map(a => `<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('');
+    const whList = this.getWarehouses();
+    const itemList = this.getItems();
+    const accList = this.getAccounts();
+
+    const whOptions = whList.map(w => `<option value="${w.id}">[${w.code}] ${w.name}</option>`).join('');
+    const itemOptions = itemList.map(it => `<option value="${it.id}">[${it.sku}] ${it.name}</option>`).join('');
+    const adjAccounts = accList.map(a => `<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('');
 
     const body = `
       <form id="form-opname-stock" enctype="multipart/form-data">
@@ -1020,7 +1096,7 @@ Modules.Inventory = {
   updateOpnameCalc: function() {
     const whId = document.getElementById('opn-wh')?.value;
     const itemId = document.getElementById('opn-item')?.value;
-    const item = this.items.find(it => it.id === itemId);
+    const item = this.getItems().find(it => it.id === itemId);
     const matched = item?.warehouse_stocks?.find(ws => ws.warehouse_id === whId);
     const systemStock = matched ? matched.stock : 0;
 
@@ -1097,11 +1173,11 @@ Modules.Inventory = {
 
   // 5. MASTER MULTI GUDANG (TAMBAH / EDIT)
   showWarehouseModal: function(whId = null) {
-    const wh = whId ? this.warehouses.find(w => w.id === whId) : null;
+    const wh = whId ? this.getWarehouses().find(w => w.id === whId) : null;
     const isEdit = !!wh;
 
     const accOptions = `<option value="">Default Akun Persediaan [1108]</option>` +
-      this.accounts.filter(a => a.category === 'ASET_LANCAR').map(a => `
+      this.getAccounts().filter(a => a.category === 'ASET_LANCAR').map(a => `
         <option value="${a.id}" ${wh && wh.inventory_account_id === a.id ? 'selected' : ''}>[${a.code}] ${a.name}</option>
       `).join('');
 
@@ -1184,7 +1260,7 @@ Modules.Inventory = {
   },
 
   deleteWarehouse: async function(whId) {
-    const wh = this.warehouses.find(w => w.id === whId);
+    const wh = this.getWarehouses().find(w => w.id === whId);
     if (!confirm(`Hapus gudang ${wh?.name || ''}? Tindakan ini tidak dapat dibatalkan.`)) return;
 
     try {
@@ -1202,9 +1278,9 @@ Modules.Inventory = {
 
   // 6. MODAL MASTER BARANG BARU DENGAN MULTI GUDANG
   showAddItemModal: function() {
-    const accInv = this.accounts.filter(a => a.category === 'ASET_LANCAR').map(a => `<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('');
-    const accCogs = this.accounts.filter(a => a.category === 'HPP').map(a => `<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('');
-    const whOptions = this.warehouses.map(w => `<option value="${w.id}">[${w.code}] ${w.name}</option>`).join('');
+    const accInv = this.getAccounts().filter(a => a.category === 'ASET_LANCAR').map(a => `<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('');
+    const accCogs = this.getAccounts().filter(a => a.category === 'HPP').map(a => `<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('');
+    const whOptions = this.getWarehouses().map(w => `<option value="${w.id}">[${w.code}] ${w.name}</option>`).join('');
 
     const body = `
       <form id="form-add-item">
@@ -1329,8 +1405,9 @@ Modules.Inventory = {
       const data = await res.json();
       const item = data.item;
 
+      const whList = this.getWarehouses();
       const whOptions = `<option value="ALL">Semua Gudang (Konsolidasi)</option>` + 
-        this.warehouses.map(w => `<option value="${w.id}" ${data.warehouse_id === w.id ? 'selected' : ''}>[${w.code}] ${w.name}</option>`).join('');
+        whList.map(w => `<option value="${w.id}" ${data.warehouse_id === w.id ? 'selected' : ''}>[${w.code}] ${w.name}</option>`).join('');
 
       let rowsHtml = (data.transactions || []).map(t => {
         let typeBadge = '';
@@ -1443,7 +1520,7 @@ Modules.Inventory = {
       'DAFTAR VALUASI PERSEDIAAN BARANG DAGANG MULTI GUDANG',
       App.activeEntity,
       headers,
-      this.items
+      this.getItems()
     );
   }
 };
